@@ -1,2 +1,9 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# Stable source line endings; preserve binary fixture bytes exactly.
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.pdf binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary

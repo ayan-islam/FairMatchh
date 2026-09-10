@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f8faf9;
+  --foreground: #0b2143;
+  --card: #ffffff;
+  --card-foreground: #0b2143;
+  --popover: #ffffff;
+  --popover-foreground: #0b2143;
+  --primary: #007d73;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f4f6;
+  --secondary-foreground: #17365d;
+  --muted: #f1f4f6;
+  --muted-foreground: #60708a;
+  --accent: #e7f7f3;
+  --accent-foreground: #00655d;
+  --destructive: #d64545;
+  --border: #dce4ea;
+  --input: #dce4ea;
+  --ring: #007d73;
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-inter), Arial, sans-serif;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+* {
+  box-sizing: border-box;
+  border-color: var(--border);
+}
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), Inter, Arial, sans-serif;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+button:not(:disabled),
+a {
+  cursor: pointer;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+/* Keep form focus inside the control so scroll containers cannot clip it. */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+input[type="checkbox"]:focus-visible,
+input[type="radio"]:focus-visible {
+  outline-offset: 2px;
+}
+[aria-invalid="true"]:focus-visible {
+  outline-color: var(--destructive);
+}
+::selection {
+  background: #d8f4e9;
+  color: #0b2143;
+}
+.fm-skip-link {
+  position: fixed;
+  left: 12px;
+  top: -70px;
+  z-index: 100;
+  background: #007d73;
+  color: white;
+  border-radius: 6px;
+  padding: 12px 18px;
+}
+.fm-skip-link:focus {
+  top: 12px;
+}
+.fm-workspace-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.fm-workspace-options > button {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 19px;
+  border: 1px solid #dfe8e5;
+  border-radius: 8px;
+  text-align: left;
+  color: #007d73;
+}
+.fm-workspace-options > button[aria-pressed="true"],
+.fm-workspace-options > button:hover {
+  background: #eef8f3;
+  border-color: #a8cdbc;
+}
+.fm-workspace-options > button > span {
+  flex: 1;
+}
+.fm-workspace-options strong {
+  display: block;
+  font-size: 15px;
+  color: #183851;
+  margin-bottom: 6px;
+}
+.fm-workspace-options small {
+  display: block;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #60708a;
+}

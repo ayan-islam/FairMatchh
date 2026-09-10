@@ -1,0 +1,44 @@
+# Private local records, object storage and generated service credentials
+/data/
+/logs/
+/backups/
+/tmp/
+.env
+.env.*
+*.env
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+!.gitkeep
+
+# Installed dependencies and generated builds
+**/node_modules/
+**/.next/
+**/.venv/
+**/__pycache__/
+**/*.pyc
+**/target/
+**/out/
+/build/
+*.tsbuildinfo
+*.log
+/tools/*
+!/tools/*.py
+!/tools/*.ps1
+!/tools/*.cmd
+
+# Machine-specific IDE settings, generated guides and backup archives
+**/.idea/
+.vscode/
+/.fairmatch-maintenance.lock
+/*.pdf
+*.zip
+*.exe
+*.msi
+*.jar
+.DS_Store
+Thumbs.db
+
+# The test PDFs/images under test resource folders are synthetic fixtures.

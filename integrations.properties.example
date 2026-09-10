@@ -1,0 +1,25 @@
+# Copy to data/integrations.properties in the real project after access is restored.
+# This example contains no credentials. Keep the filled-in file private and out of Git.
+# Obtain these settings from your email provider. Blank settings disable email actions.
+fairmatch.mail.host=
+fairmatch.mail.port=587
+fairmatch.mail.username=
+fairmatch.mail.password=
+fairmatch.mail.from=
+# false uses mandatory STARTTLS; true uses TLS from connection start (usually port 465).
+fairmatch.mail.ssl=false
+fairmatch.mail.dispatch=true
+
+# Existing installations already have their administrator: leave this false.
+# For a new empty database only, fill these values and enable once, then disable it.
+# This never resets passwords or promotes existing candidate/employer accounts.
+fairmatch.bootstrap.admin-enabled=false
+fairmatch.bootstrap.admin-username=
+fairmatch.bootstrap.admin-email=
+fairmatch.bootstrap.admin-name=
+fairmatch.bootstrap.admin-password=
+
+# Keep sample content and password-based HTTP Basic access disabled.
+fairmatch.seed=false
+fairmatch.bootstrap.demo-enabled=false
+fairmatch.auth.basic-enabled=false
