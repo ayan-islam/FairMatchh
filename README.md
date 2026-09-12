@@ -1,6 +1,6 @@
 # FairMatch - local fullstack application
 
-Start from `C:\Users\HP\Desktop\fairmatch` in PowerShell:
+Open PowerShell in the project folder (the folder containing this README), then run:
 
 ```powershell
 .\START_FAIRMATCH.cmd
@@ -12,7 +12,7 @@ Double-click **STOP_FAIRMATCH.cmd** to stop the background services without dele
 
 Existing employer, administrator and candidate accounts remain in the local database. New candidates can register in the Candidate workspace. New organization owners can register as employers, submit business evidence and obtain an administrator review before publishing. An organization owner can invite additional recruiters from **Settings > Team & access**.
 
-Read **FairMatch_Project_Demonstration_Guide.pdf** or its editable source **PROJECT_DEMONSTRATION_GUIDE.md** for the current presentation script, architecture, codebase walkthrough and viva questions. **TEAM_ACCESS_GUIDE.md** explains recruiter invitations and permissions. **FULLSTACK_PROGRESS.md** records implemented and remaining scope. Older guides describe earlier milestones.
+Read **PROJECT_DEMONSTRATION_GUIDE.md** for the current presentation script, architecture, codebase walkthrough and viva questions. The original Desktop project also includes a rendered **FairMatch_Project_Demonstration_Guide.pdf**; generated PDFs are omitted from the GitHub source snapshot. **TEAM_ACCESS_GUIDE.md** explains recruiter invitations and permissions. **FULLSTACK_PROGRESS.md** in the Desktop project records implemented and remaining scope. Older guides describe earlier milestones.
 
 ## Working workflows
 
@@ -37,7 +37,7 @@ All services bind locally. No online deployment is configured or required for th
 Start local services first. Integration tests need MongoDB and the document worker/MinIO. Tests create isolated test databases, not changes to the student's `fairmatch` database.
 
 ```powershell
-Set-Location C:\Users\HP\Desktop\fairmatch\backend
+Set-Location .\backend
 .\mvnw.cmd test
 Set-Location ..\frontend
 npm.cmd run lint
