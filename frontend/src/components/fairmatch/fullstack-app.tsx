@@ -9,6 +9,7 @@ import { RecruiterWorkspace } from "./recruiter-workspace";
 import { CandidateWorkspace } from "./candidate-workspace";
 import { PlatformAdmin } from "./platform-admin";
 import { AccountSecurity, PasswordRecovery } from "./account-security";
+import { JoinOrganization } from "./team-access";
 import { api, request, type InterviewInput } from "@/lib/api";
 import {
   platformApi,
@@ -231,6 +232,7 @@ export function FullstackApp() {
           auditEvents={audit}
           interviews={interviews}
           organization={org}
+          accountId={user.id}
           members={members}
           onOrganizationChanged={setOrg}
           onSaveOrganization={async (value) => {
@@ -291,6 +293,7 @@ function AccountForm({
   onSession: (token: string) => void;
 }) {
   const [register, setRegister] = useState(false);
+  const [joining, setJoining] = useState(false);
   const [username, setUsername] = useState("");
   const [recovering, setRecovering] = useState(false);
   const [password, setPassword] = useState("");
@@ -328,6 +331,7 @@ function AccountForm({
       setBusy(false);
     }
   }
+  if (joining) return <JoinOrganization onSession={onSession} onBack={() => setJoining(false)} />;
   return (
     <main className="fm-login" id="main-content">
       <span className="fm-login-brand">FairMatch.</span>
@@ -413,6 +417,7 @@ function AccountForm({
         </Button>
       )}
       {!register && <Button variant="ghost" onClick={() => setRecovering(true)}>Forgot password?</Button>}
+      {workspace === "employer" && <Button variant="ghost" onClick={() => setJoining(true)}>Join an organization</Button>}
       {recovering && <PasswordRecovery onClose={() => setRecovering(false)} />}
     </main>
   );

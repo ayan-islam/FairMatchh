@@ -69,6 +69,10 @@ public class AccountSecurityService implements OAuth2TokenValidator<Jwt> {
     }
     @Override public OAuth2TokenValidatorResult validate(Jwt jwt) {
         boolean valid=jwt.getId()!=null&&mongo.exists(Query.query(Criteria.where("_id").is(jwt.getId()).and("username").is(jwt.getSubject()).and("revoked").is(false).and("expiresAt").gt(Instant.now())),SavedSession.class);
+        if(valid) {
+            var account=mongo.findOne(Query.query(Criteria.where("username").is(jwt.getSubject())),PlatformService.Account.class);
+            valid=account!=null&&platform.membershipActive(account);
+        }
         return valid?OAuth2TokenValidatorResult.success():OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token","Session expired or revoked",null));
     }
     public void logout(String username,String sessionId,boolean all) {

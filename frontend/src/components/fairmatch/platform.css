@@ -205,3 +205,18 @@
 .fs-ranking-details ol,.fs-criterion ol { list-style:decimal; padding-left:24px; line-height:1.7; }
 .fs-ranking-details blockquote { padding:12px; background:#eff6f5; border-left:3px solid #00857b; white-space:pre-wrap; }
 @media(max-width:650px) { .fs-ranking-filters { grid-template-columns:1fr; } .fs-ranking-row-heading { flex-direction:column; } .fs-ranking-panel { padding:18px; } }
+.fs-team-invite, .fs-team-decision, .fs-team-code {
+  border: 1px solid #d8e5e7;
+  border-radius: 10px;
+  padding: 20px;
+  min-width: 0;
+}
+.fs-team-code { background: #eef8f5; }
+.fs-team-code input { font-family: monospace; }
+.fs-team-invitation { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid #d8e5e7; }
+.fs-team-invitation > div { min-width: 0; overflow-wrap: anywhere; }
+.fs-team-invitation p { margin-top: 6px; }
+@media (max-width: 600px) {
+  .fs-team-invitation { align-items: flex-start; flex-direction: column; }
+  .fs-team-invite, .fs-team-decision, .fs-team-code { padding: 14px; }
+}

@@ -70,6 +70,7 @@ import { OrganizationDocuments, type OrganizationEvidence } from "./organization
 import { GovernancePanel, EmployerInbox } from "./governance-panel";
 import { CandidateRanking } from "./candidate-ranking";
 import { CriteriaReviewDialog } from "./criteria-review";
+import { TeamAccess } from "./team-access";
 
 type View =
   | "overview"
@@ -103,10 +104,11 @@ export function RecruiterWorkspace({
   interviews,
   onScheduleInterview,
   onEvaluateInterview,
-  onCancelInterview, organization, members, onSaveOrganization, onOrganizationChanged, onReviewCandidate, auth,
+  onCancelInterview, organization, members, onSaveOrganization, onOrganizationChanged, onReviewCandidate, auth, accountId,
 }: {
   organization: Organization;
   members: Member[];
+  accountId: string;
   onSaveOrganization: (org: Organization) => Promise<Organization>;
   onOrganizationChanged: (org: Organization) => void;
   onReviewCandidate: (candidate: Candidate) => void;
@@ -155,7 +157,9 @@ export function RecruiterWorkspace({
   const [savingOrganization, setSavingOrganization] = useState(false);
   const evidenceLoaded = useCallback((bundle: OrganizationEvidence) => { setOrg(bundle.organization); onOrganizationChanged(bundle.organization); }, [onOrganizationChanged]);
   const [reviewing, setReviewing] = useState<Candidate | null>(null);
-  const team = members;
+  const signedInMember = members.find(member => member.id === accountId);
+  const canManageOrganization = signedInMember?.role === "Owner";
+  const initials = (value: string) => value.trim().split(/\s+/).slice(0, 2).map(word => word[0]).join("").toUpperCase();
   const current = candidates.find((c) => c.id === selected) || candidates[0];
   const activeJobs = jobs.filter((j) => j.status === "Active");
   const newCandidates = candidates.filter((c) => c.stage === "New");
@@ -265,7 +269,7 @@ export function RecruiterWorkspace({
           <small>Fairer hiring. Stronger Bangladesh.</small>
         </button>
         <button className="fm-workspace-button" onClick={switchWorkspace}>
-          <span className="fm-org-avatar">AT</span>
+          <span className="fm-org-avatar">{initials(org.name)}</span>
           <span>
             <strong>{org.name}</strong>
             <small>Employer workspace</small>
@@ -298,10 +302,10 @@ export function RecruiterWorkspace({
             </div>
           </div>
           <button className="fm-user" onClick={switchWorkspace}>
-            <span className="fm-user-avatar">RK</span>
+            <span className="fm-user-avatar">{initials(signedInMember?.name || "Employer")}</span>
             <span>
-              <strong>{members[0]?.name || "Employer"}</strong>
-              <small>Recruiter</small>
+              <strong>{signedInMember?.name || "Employer"}</strong>
+              <small>{signedInMember?.role || "Recruiter"}</small>
             </span>
             <ArrowLeftRight size={16} />
           </button>
@@ -345,7 +349,7 @@ export function RecruiterWorkspace({
               <Bell size={19} />
               <span className="fm-notification-dot" />
             </button>
-            <span className="fm-user-avatar small">RK</span>
+            <span className="fm-user-avatar small">{initials(signedInMember?.name || "Employer")}</span>
           </div>
         </header>
         <main className="fm-main" id="main-content">
@@ -1249,6 +1253,7 @@ export function RecruiterWorkspace({
                           }
                         >
                           <Input
+                            disabled={!canManageOrganization || savingOrganization}
                             required
                             type={k === "website" ? "url" : "text"}
                             value={org[k]}
@@ -1268,47 +1273,12 @@ export function RecruiterWorkspace({
                         </p>
                       </div>
                     </div>
-                    <Button type="submit" disabled={savingOrganization}>{savingOrganization ? "Saving..." : "Save changes"}</Button>
+                    {canManageOrganization ? <Button type="submit" disabled={savingOrganization}>{savingOrganization ? "Saving..." : "Save changes"}</Button> : <p>Only the organization owner can edit these details.</p>}
                   </form>
                 </Panel>
               )}
-              {settingsTab === "Verification documents" && <OrganizationDocuments auth={auth} onLoaded={evidenceLoaded} />}
-              {settingsTab === "Team & access" && (
-                <Panel
-                  title="Team members"
-                  description="Give each person the access their work needs."
-
-                >
-                  <div className="fm-table-scroll">
-                    <table className="fm-table">
-                      <thead>
-                        <tr>
-                          <th>MEMBER</th>
-                          <th>ROLE</th>
-                          <th>STATUS</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {team.map((t) => (
-                          <tr key={t.email}>
-                            <td>
-                              <strong>{t.name}</strong>
-                              <small>{t.email}</small>
-                            </td>
-                            <td>{t.role}</td>
-                            <td>
-                              <StatusBadge>{t.status}</StatusBadge>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <p className="fm-panel-description">
-                    Only registered members of this organization are listed. Team invitations are planned for a later milestone.
-                  </p>
-                </Panel>
-              )}
+              {settingsTab === "Verification documents" && (canManageOrganization ? <OrganizationDocuments auth={auth} onLoaded={evidenceLoaded} /> : <Panel title="Business verification" description="Your organization owner manages the private supporting documents."><p>Current organization status: {organization.status}.</p></Panel>)}
+              {settingsTab === "Team & access" && <TeamAccess auth={auth} />}
               {settingsTab === "Billing" && <Panel title="Local classroom edition" description="Payments and subscriptions are not enabled. No payment is required to use this local build."><p>Payment integration remains part of the remaining project work.</p></Panel>}
               {settingsTab === "Data & privacy" && (
                 <Panel

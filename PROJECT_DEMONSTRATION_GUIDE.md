@@ -3,21 +3,21 @@
 
 **A practical script for your project presentation, live demonstration and viva.**
 
-Prepared from the local implementation on 10 September 2026. Project folder: `C:\Users\HP\Desktop\fairmatch`.
+Prepared from the local implementation on 12 September 2026. Project folder: `C:\Users\HP\Desktop\fairmatch`.
 
 > Your opening: "FairMatch is a recruitment application for employers, candidates and administrators. It connects job publishing, candidate applications, evidence review, explainable ranking and hiring stages. The core records are saved in a backend database, so the work survives refresh and restart."
 
-This guide describes the current implementation, including the new candidate ranking feature. Use it instead of older presentation instructions where they disagree. It does not claim that every planned integration is finished.
+This guide describes the connected local implementation, including candidate ranking and recruiter team access. Use it instead of older presentation instructions where they disagree. It does not claim that every planned integration is finished.
 
 ### Read it in this order
 
 | Pages | What to prepare |
 | --- | --- |
 | 2-3 | Startup checklist and timed presentation plan |
-| 4-11 | Step-by-step demonstrations of the application features |
-| 12-17 | Architecture, code map, request flows, data and security |
-| 18 | Test evidence and recovery from common demo problems |
-| 19-20 | Teacher questions, limitations and closing script |
+| 4-12 | Step-by-step demonstrations, including team access |
+| 13-19 | Architecture, code map, vital code, data and security |
+| 20 | Test evidence and recovery from common demo problems |
+| 21-22 | Teacher questions, limitations and closing script |
 
 ### Three things to remember
 
@@ -72,7 +72,7 @@ Use **STOP_FAIRMATCH.cmd** when finished. Closing VS Code alone does not stop ba
 | 14-18 min | VS Code walkthrough | One request from React to Java to MongoDB |
 | 18-20 min | Test evidence and closing | What is proven, what remains, questions |
 
-Prepare organization approval beforehand if time is short. For a longer demonstration, add the full administrator review on page 4 and support/privacy features on page 11. Do not attempt every optional branch in a short presentation.
+Prepare organization approval beforehand if time is short. For a longer demonstration, add the full administrator review on page 4, teammate invitation on page 5, and support/privacy features on page 12. Do not attempt every optional branch in a short presentation.
 
 ### A five-minute emergency version
 
@@ -118,7 +118,27 @@ Approval requires at least one current document and acknowledgment of all curren
 First-admin setup for a fresh installation is described in `ACCOUNT_SECURITY_SETUP.md`. Do not reveal private configuration or passwords on the projector.
 
 <!-- page -->
-# 5. Create, save and share a job
+# 5. Invite a recruiter and explain team access
+
+### Demonstrate the owner and recruiter roles
+
+1. Sign in as the organization's **Owner**. Open **Settings > Team & access**. Enter a teammate's unused email and choose **Create invitation**.
+2. Copy the private one-time code shown in the dialog. It is shown only once, expires after 48 hours and is not sent automatically by email. For rehearsal, use a synthetic address and share the code privately.
+3. In a separate browser profile or after signing out, choose **Employer > Join an organization**. Enter that code, the invited email, a name and new account credentials. The recruiter joins the existing organization.
+4. Reload the recruiter workspace. The same organization is still selected. The recruiter can work on jobs, applications, assessments, ranking and interviews.
+5. Open **Settings** as the recruiter. Organization profile fields are read-only, business verification files are restricted, and the Team page has no invite/suspend controls.
+6. Return as Owner and show **Suspend access** with a reason, then **Restore access** if appropriate. Suspension revokes existing sessions; restoration requires a new sign-in. An unused invitation can be revoked.
+
+### What the backend enforces
+
+`TeamController.java` exposes invitation acceptance and authenticated team endpoints. `TeamService.java` generates a 256-bit random code but stores only its SHA-256 hash, binds it to the invited email and consumes it once in the account-creation transaction. It records expiry, revocation and audit events. A rate limit counts failed redemption attempts. `PlatformService.java` stores the original organization owner separately from the member list. `AccountSecurityService.java` checks active membership during session validation, so a suspended member cannot keep using an old token. The Java API enforces owner-only operations even if someone bypasses hidden browser controls.
+
+The signed-in recruiter is shown by `recruiter-workspace.tsx`; `team-access.tsx` provides the team UI. `TeamAccessTest.java` covers invalid and reused codes, owner boundaries, concurrency and suspension. See `TEAM_ACCESS_GUIDE.md` for the precise operator steps and permission table.
+
+> Say: "One organization can have multiple recruiter accounts, but ownership and sensitive business documents stay with the owner. A teammate must join this same running FairMatch installation; a separately cloned laptop has a different database. The invitation proves possession of a code, not ownership of an email inbox."
+
+<!-- page -->
+# 6. Create, save and share a job
 
 ### Click through the workflow
 
@@ -126,7 +146,7 @@ First-admin setup for a fresh installation is described in `ACCOUNT_SECURITY_SET
 2. Choose an academic department/program, such as **CSE, EEE, ICT, Mechanical Engineering or BBA**. Select a related job position. For a different title, choose the custom-position option and enter it.
 3. Enter location, workplace, salary, application deadline and a clear job description. Add specific job-related requirements.
 4. Choose **Save as draft**. Open the Draft filter, refresh and reopen the job using **Edit**. Point out that the saved fields remain.
-5. Use **Ranking setup** to define the scoring rubric before collecting applications where possible. Page 9 explains it.
+5. Use **Ranking setup** to define the scoring rubric before collecting applications where possible. Page 10 explains it.
 6. Finish the job details and no-applicant-fee confirmation. Publish after organization approval.
 7. Use the job's share control and **Copy link**. Open that link in the candidate workspace.
 
@@ -144,7 +164,7 @@ First-admin setup for a fresh installation is described in `ACCOUNT_SECURITY_SET
 > Say: "A draft and a published job have different validation requirements. The browser gives immediate feedback, but the backend is authoritative even if someone sends a request directly. The dropdown is a selection aid, not a government-accredited degree validation service."
 
 <!-- page -->
-# 6. Candidate CV extraction and profile
+# 7. Candidate CV extraction and profile
 
 ### Demonstrate extraction carefully
 
@@ -170,7 +190,7 @@ The original PDF stays in MinIO. Java saves owner-linked metadata and extracted 
 For a deeper explanation, use `FairMatch_CV_Extraction_Explained.pdf` and `OCR_SETUP_AND_CODE_GUIDE.md` after the main demonstration.
 
 <!-- page -->
-# 7. Apply through the exact job link
+# 8. Apply through the exact job link
 
 ### Candidate steps
 
@@ -198,7 +218,7 @@ The same candidate contact cannot create repeated applications for the same job.
 > Say: "A submitted application is not just React state or a browser draft. The server owns its identity and stores the submitted snapshot, which is why refresh does not remove it."
 
 <!-- page -->
-# 8. Evidence review, messages and pipeline
+# 9. Evidence review, messages and pipeline
 
 ### Employer demonstration
 
@@ -227,7 +247,7 @@ The evidence-band summary is Strong evidence when every requirement is Supported
 > Say: "The system records evidence and a reason. It does not infer that a candidate is unsuitable just because information is missing. A stage move is a separate human action, and stale updates are rejected."
 
 <!-- page -->
-# 9. Configure and operate candidate ranking
+# 10. Configure and operate candidate ranking
 
 ### Set the rubric first
 
@@ -254,7 +274,7 @@ Only complete, current assessments appear in the numbered ranking. Equal totals 
 Code: `candidate-ranking.tsx` and `application/RankingController.java`. The implementation does not automatically import interview evaluations, infer ratings from CV keywords or make hiring decisions.
 
 <!-- page -->
-# 10. Explain the ranking calculation
+# 11. Explain the ranking calculation
 
 ### A worked example
 
@@ -285,7 +305,7 @@ MongoDB retains versioned history. A snapshot hash binds the assessment to the r
 > Teacher answer: "We avoid stale comparisons. If the evidence or assessment rules change, the earlier result remains in history but must be reviewed again before it can appear as a current rank."
 
 <!-- page -->
-# 11. Demonstrate the supporting features
+# 12. Demonstrate the supporting features
 
 | Feature | What to do | What to explain |
 | --- | --- | --- |
@@ -306,7 +326,7 @@ For a normal presentation, show an interview and a report after the main hiring 
 **BACKUP_FAIRMATCH.cmd** makes a verified private backup while coordinating service shutdown/restart. **RESTORE_FAIRMATCH.cmd** extracts into a new recovery folder rather than replacing live data. Backups contain private data and keys, are not encrypted by this tool, and do not include the whole source/dependency installation. Follow `BACKUP_AND_RECOVERY_GUIDE.md`; do not rehearse a restore during a short presentation.
 
 <!-- page -->
-# 12. Explain the architecture
+# 13. Explain the architecture
 
 @architecture
 
@@ -328,7 +348,7 @@ The browser requests `/api/...` on Next.js. `frontend/next.config.ts` forwards t
 Maven manages Java dependencies/builds; npm manages the frontend. The recommended stack is represented in the implementation, but the presence of a library does not by itself prove every planned product feature is finished.
 
 <!-- page -->
-# 13. Frontend code tour in VS Code
+# 14. Frontend code tour in VS Code
 
 Start from `C:\Users\HP\Desktop\fairmatch\frontend`. Use **Ctrl+P** to open a file, then **Ctrl+F** to find the named component or function. Read the live path before explaining old prototype files.
 
@@ -339,6 +359,7 @@ Start from `C:\Users\HP\Desktop\fairmatch\frontend`. Use **Ctrl+P** to open a fi
 | src/components/fairmatch/fullstack-app.tsx | Workspace selection, tab-session tokens, account loading, employer data and save callbacks. Find saveJob and move. |
 | src/components/fairmatch/recruiter-workspace.tsx | Employer views and selected UI state: jobs, applications, ranking, pipeline, interviews and reports. |
 | src/components/fairmatch/recruiter-dialogs.tsx | Job fields, draft/publish steps and StageDialog. Forms call provided save functions. |
+| src/components/fairmatch/team-access.tsx | Join form, invitation creation and member access controls. |
 | src/components/fairmatch/candidate-workspace.tsx | Exact linked-job filtering, profile, drafts, application submission and candidate tabs. Find linkedJob. |
 | src/components/fairmatch/candidate-ranking.tsx | CandidateRanking, RubricEditor, RankingReview and RankingRows. Separates rubric setup, entered ratings and explanations. |
 | src/lib/api.ts; src/lib/platform-api.ts | HTTP requests, typed responses, authentication headers and backend error messages. |
@@ -351,7 +372,7 @@ Start from `C:\Users\HP\Desktop\fairmatch\frontend`. Use **Ctrl+P** to open a fi
 The file named `demo-data.ts` still supplies shared types and utilities to connected code. A filename does not prove the running workspace uses fake data. Trace the live `FullstackApp` and API calls. Older `candidate-portal.tsx` or `admin-workspace.tsx` files are not the main connected candidate/admin screens.
 
 <!-- page -->
-# 14. Backend and worker code tour
+# 15. Backend and worker code tour
 
 Java source root: `C:\Users\HP\Desktop\fairmatch\backend\src\main\java\com\fairmatch`.
 
@@ -365,6 +386,7 @@ Java source root: `C:\Users\HP\Desktop\fairmatch\backend\src\main\java\com\fairm
 | application/RankingController.java | Rubrics, assessments, snapshots, validation, weighted totals, ties and reassessment. Find saveRubric, save and board. |
 | interview/InterviewService.java | Schedule, reschedule, evaluation, cancellation and reaction to final application outcomes. |
 | platform/PlatformService.java | Accounts, organizations, profiles, drafts, notifications and support. |
+| platform/TeamService.java, TeamController.java | Owner-only invitations, code redemption, membership, suspension and audit. |
 | platform/OrganizationEvidenceService.java | Private business evidence, hashes, review snapshots and removal queue. |
 | document/DocumentController.java | Candidate document access, upload, extraction, confirmation and download. |
 | privacy/CandidatePrivacyController.java | Owner-scoped export and stale-protected draft deletion. |
@@ -377,7 +399,7 @@ A **controller** accepts a request and returns a response. A **service** enforce
 Worker root: `document-worker`. Open `app.py` for FastAPI file routes, `extract_text.py` for PDF/section processing and `ocr.py` for Tesseract. Operational code lives in `operations`; test/rehearsal utilities live in `tools`. These utilities are not the user's main application screens.
 
 <!-- page -->
-# 15. Trace a saved action end to end
+# 16. Trace a saved action end to end
 
 ### Main example: moving an application
 
@@ -408,7 +430,32 @@ Representative request body, using a rehearsal application:
 A network error can leave a save outcome uncertain. Refresh saved records before repeating an action; do not assume a missing success message means nothing was written.
 
 <!-- page -->
-# 16. Data model and persistence
+# 17. Five vital code ideas to explain
+
+### 1. A component makes a request; it does not own the rule
+
+In `fullstack-app.tsx`, `saveJob` and `move` receive an action from the employer UI, await the API call and refresh the visible state. In `platform-api.ts` and `api.ts`, typed request functions attach the current session. TypeScript catches developer mistakes, while Java must still reject an invalid network request.
+
+### 2. The signed-in principal defines ownership
+
+In `ApplicationController.java`, `submitOwned` uses the candidate account from the authenticated request. In `JobController.java`, employer operations use the signed-in organization. A browser-supplied owner or organization ID is not trusted. `BackendConfiguration.java` checks role and session; service queries constrain records to that owner. Changing a URL cannot grant access to another employer's job.
+
+### 3. Conditional updates prevent lost decisions
+
+In `ApplicationService.changeStage`, the request includes `expectedStage`, the stage the recruiter saw. The update applies only while the saved record still has that stage. If another recruiter moved it first, the stale request fails and the user reloads. A reason is required, and history/notification work accompanies the transition.
+
+### 4. Ranking is reproducible arithmetic
+
+Open `RankingController.java`. A job rubric has weights totaling 100, and each criterion gets a human rating from 0 to 4. The score is the sum of `weight x rating / 4`. A 40%-weight criterion rated 3 contributes 30 points. Missing required ratings leave an assessment unranked. The server saves quotes, reasons, versions and an explanation; changed evidence requires reassessment. The score never moves a candidate automatically.
+
+### 5. Team access has a distinct privilege boundary
+
+Open `TeamService.java`: invitation creation stores a hash; redemption checks email, expiry and unused status; account creation consumes the code in one transaction. `PlatformService.java` retains a stable owner ID. `AccountSecurityService.java` checks active membership on later requests, so suspension blocks saved sessions. `TeamAccessTest.java` sends forbidden recruiter actions directly to the API. A disabled UI control is only a usability cue; the server rule is the protection.
+
+> Say: "I can follow one click through the component, API, server validation, database update and returned view. Each layer has a separate responsibility, and the tests cover failure paths as well as the successful path."
+
+<!-- page -->
+# 18. Data model and persistence
 
 ### The main relationships
 
@@ -429,7 +476,7 @@ MongoDB uses document references such as `organizationId`, `jobId` and `ownerId`
 
 ### Why refresh and restart preserve work
 
-React state is temporary, but a successful save writes the record to MongoDB. Original PDFs are stored in MinIO's data directory. The launcher reuses those same persistent locations. Tab session storage helps preserve the current login during reload; it is not the database.
+React state is temporary, but a successful save writes the record to MongoDB. Original PDFs are stored in MinIO's data directory. The launcher reuses those persistent locations. Tab session storage preserves the current login during reload; it is not the database. Team ownership, invitations and membership are MongoDB records.
 
 ### Explain transactions and concurrency
 
@@ -438,11 +485,11 @@ A transaction groups related changes so they commit together or roll back togeth
 > Say: "We store both the latest useful state and a history of reviewed decisions. History makes changes explainable, but ordinary database history is not a cryptographically tamper-proof ledger."
 
 <!-- page -->
-# 17. Security and extraction internals
+# 19. Security and extraction internals
 
 ### Authentication is different from authorization
 
-Authentication establishes who signed in. Authorization establishes what that account can do. Spring Security checks JWT signature, issuer, expiry, role and the saved session. Service queries then scope records to the signed-in organization or candidate. Hiding an admin button would not replace those server checks.
+Authentication establishes who signed in. Authorization establishes what that account can do. Spring Security checks JWT signature, issuer, expiry, role, saved session and active team membership. Service queries then scope records to the signed-in organization or candidate. Hiding an admin button would not replace those server checks.
 
 Passwords use **BCrypt hashing**, not reversible password encryption. The JWT is signed, not a place to hide secrets. Local signing keys persist across restarts. Sign-out revokes the server session; password changes/sign-out-all revoke all account sessions. Public registration cannot promote an employer into an administrator.
 
@@ -463,15 +510,15 @@ Limits include 8 MB, ten pages, up to 6,000 extracted characters per page and a 
 Email challenges, revocable sessions and an SMTP outbox are implemented. Actual email delivery still requires sender configuration and inbox verification. Payments are unavailable without merchant integration. Do not show a test or mock as evidence of real delivered email or payment processing.
 
 <!-- page -->
-# 18. Tests and presentation troubleshooting
+# 20. Tests and presentation troubleshooting
 
 ### Evidence you can show
 
-The latest complete backend run recorded **46 tests, zero failures and zero errors** in `logs/ranking-full-build.log`. The seven ranking tests passed again after final input-validation fixes in `logs/ranking-final-test.log`. Frontend lint, TypeScript and production build passed. These are verification records from September 10, not a fresh test run every time this guide is opened.
+The latest complete backend run recorded **53 tests, zero failures and zero errors** in `logs/team-full-build.log`: the earlier 46 plus seven team-access tests. Frontend lint, TypeScript and production build passed in that run. These are verification records from September 12, not a fresh test run every time this guide is opened.
 
 `logs/ranking-ui-result.json` records browser creation of a rubric, a 75/100 completed assessment and a saved incomplete assessment. Their quotes, explanations and history survived browser reload and a packaged backend restart. Desktop and narrow mobile dialog controls were checked. Real applicant ratings were not altered for those checks.
 
-Earlier verification also recorded eleven Python extraction/storage tests and eight backup safety tests. These are separate suites, not part of the 46 Java count. Tests use isolated databases and synthetic fixtures. SMTP mocks test software behavior, not actual inbox delivery.
+An isolated browser check created a recruiter via a one-use invitation and confirmed the shared organization, read-only recruiter settings and persisted session after reload. Earlier verification recorded eleven Python extraction/storage tests and eight backup safety tests. These are separate suites, not part of the 53 Java count. Tests use isolated databases and synthetic fixtures. SMTP mocks test software behavior, not actual inbox delivery.
 
 | If this happens | What to do |
 | --- | --- |
@@ -487,7 +534,7 @@ Earlier verification also recorded eleven Python extraction/storage tests and ei
 For development, the root `REBUILD_FAIRMATCH.ps1` coordinates rebuilding and restarting. Use it before rehearsal, not during the teacher's demonstration.
 
 <!-- page -->
-# 19. Likely teacher questions
+# 21. Likely teacher questions
 
 ### "What makes this fullstack?"
 
@@ -521,12 +568,16 @@ No. Structured identity/contact fields are omitted, but free text may reveal ide
 
 Show the same reference and result after reload, then point to the restart verification and test assertions. Explain the relevant MongoDB document and transaction. Do not use a success toast alone as proof of long-term persistence.
 
+### "How can a teammate join and what can they do?"
+
+The organization owner creates a one-use, email-bound invitation. A new recruiter redeems it on the same installation and gets a separate account in that organization. The recruiter can do hiring work but cannot edit company verification or team access. Owner suspension revokes recruiter sessions. The code is shared manually; email ownership is not verified by the invitation itself.
+
 <!-- page -->
-# 20. Finish honestly and confidently
+# 22. Finish honestly and confidently
 
 ### What you can claim
 
-The connected local recruitment journey is implemented: role-based access, organization evidence review, drafts and publishing, exact job links, candidate CV/profile workflows, applications, evidence review, explainable human-rated ranking, recorded stages, interviews, notifications, support, reports and selected privacy/backup controls.
+The connected local recruitment journey is implemented: role-based access, organization evidence review, owner-controlled recruiter invitations, drafts and publishing, exact job links, candidate CV/profile workflows, applications, evidence review, explainable human-rated ranking, recorded stages, interviews, notifications, support, reports and selected privacy/backup controls.
 
 ### What you should not claim
 
@@ -537,7 +588,7 @@ The connected local recruitment journey is implemented: role-based access, organ
 
 ### Remaining engineering work
 
-Remaining work includes real SMTP delivery, recruitment email/SMS, payments, team invitations/permissions, retention/account erasure, extraction quality, identity redaction, external verification and production hardening. Online deployment was not required for the laptop assessment.
+Remaining work includes real SMTP delivery, recruitment email/SMS, payments, email-verified invitations, finer permission roles, retention/account erasure, extraction quality, identity redaction, external verification and production hardening. Online deployment was not required for the laptop assessment.
 
 ### Closing script
 
@@ -552,4 +603,4 @@ Remaining work includes real SMTP delivery, recruitment email/SMS, payments, tea
 
 ### Source index for further reading
 
-Sources: the code named on pages 12-17, `backend/pom.xml`, `frontend/package.json`, September 10 test logs and `FULLSTACK_PROGRESS.md`. Companion guides cover ranking, requirement review, account security, privacy and backup/recovery. Older guides contain historical status and test counts; use the behavior described here for presentation.
+Sources: the code named on pages 13-19, `backend/pom.xml`, `frontend/package.json`, September 12 test logs and `FULLSTACK_PROGRESS.md`. Companion guides cover ranking, requirement review, team access, account security, privacy and backup/recovery. Older guides contain historical status and test counts; use the behavior described here for presentation.

@@ -9,6 +9,7 @@ import java.util.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.FindAndModifyOptions;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.query.*;
@@ -50,7 +51,7 @@ public class PlatformService implements UserDetailsService {
     @Override public UserDetails loadUserByUsername(String username) {
         var account=mongo.findOne(Query.query(Criteria.where("username").is(username.toLowerCase(Locale.ROOT))),Account.class);
         if(account==null)throw new UsernameNotFoundException("Invalid credentials.");
-        return User.withUsername(account.username()).password(account.passwordHash()).roles(account.role()).build();
+        return User.withUsername(account.username()).password(account.passwordHash()).roles(account.role()).disabled(!membershipActive(account)).build();
     }
     public Account account(String username) {
         var result=mongo.findOne(Query.query(Criteria.where("username").is(username)),Account.class);
@@ -58,12 +59,33 @@ public class PlatformService implements UserDetailsService {
     }
     public String organizationId(String username) {
         var a=account(username);
-        if(!a.role().equals("EMPLOYER")||a.organizationId()==null)throw new ApiException(HttpStatus.FORBIDDEN,"Employer membership required.");
+        if(!a.role().equals("EMPLOYER")||a.organizationId()==null||!membershipActive(a))throw new ApiException(HttpStatus.FORBIDDEN,"Active employer membership required. Contact the organization owner.");
         return a.organizationId();
+    }
+    public boolean membershipActive(Account a) {
+        return !a.role().equals("EMPLOYER") || !mongo.exists(Query.query(Criteria.where("_id").is(a.id()).and("status").is("Suspended")),"team_access");
+    }
+    public Account organizationOwner(String org) {
+        var ownership=mongo.findById(org,Ownership.class);
+        if(ownership==null) {
+            // Migrate the original employer once; later joins never change ownership.
+            var first=mongo.findOne(Query.query(Criteria.where("organizationId").is(org).and("role").is("EMPLOYER")).with(Sort.by("createdAt","_id")),Account.class);
+            if(first==null)throw new ApiException(HttpStatus.CONFLICT,"Organization owner is unavailable. Contact support.");
+            ownership=mongo.findAndModify(Query.query(Criteria.where("_id").is(org)),new Update().setOnInsert("ownerId",first.id()),FindAndModifyOptions.options().upsert(true).returnNew(true),Ownership.class);
+        }
+        var owner=mongo.findById(ownership.ownerId(),Account.class);
+        if(owner==null||!org.equals(owner.organizationId()))throw new ApiException(HttpStatus.CONFLICT,"Organization owner is unavailable. Contact support.");
+        return owner;
+    }
+    public String requireOrganizationOwner(String username) {
+        var org=organizationId(username);
+        if(!organizationOwner(org).username().equals(username))throw new ApiException(HttpStatus.FORBIDDEN,"Only the organization owner can manage the team, organization profile and verification documents.");
+        return org;
     }
     public Account login(String username,String password) {
         var a=mongo.findOne(Query.query(Criteria.where("username").is(username.trim().toLowerCase(Locale.ROOT))),Account.class);
         if(a==null || !passwords.matches(password,a.passwordHash()))throw new ApiException(HttpStatus.UNAUTHORIZED,"Incorrect username or password.");
+        if(!membershipActive(a))throw new ApiException(HttpStatus.FORBIDDEN,"Your organization access is suspended. Contact the organization owner.");
         return a;
     }
     @Transactional public Account register(Registration r) {
@@ -79,6 +101,7 @@ public class PlatformService implements UserDetailsService {
             mongo.insert(new Organization(org,r.organizationName().trim(),"","","",contact,"Pending","",Instant.now(),0));
         }
         var account=mongo.insert(new Account(UUID.randomUUID().toString(),username,contact,r.name().trim(),r.role(),org,passwords.encode(r.password()),Instant.now()));
+        if(org!=null)mongo.insert(new Ownership(org,account.id()));
         audit.record(org==null?"platform":org,"ACCOUNT_CREATED",account.id(),r.role(),username);
         return account;
     }
@@ -89,6 +112,7 @@ public class PlatformService implements UserDetailsService {
         if(!organization(id).status().equals("Verified"))throw new ApiException(HttpStatus.CONFLICT,"Your organization must be verified by an administrator before publishing jobs.");
     }
     @Transactional public Organization saveOrganization(String id,OrganizationInput r,String actor) {
+        if(!requireOrganizationOwner(actor).equals(id))throw new ApiException(HttpStatus.FORBIDDEN,"Organization owner required.");
         var old=organization(id);
         if(r.name().trim().length()<2)bad("Enter an organization name.");
         var saved=new Organization(id,r.name().trim(),r.industry().trim(),r.location().trim(),r.website().trim(),old.contact(),
@@ -112,8 +136,9 @@ public class PlatformService implements UserDetailsService {
         return organization(old.id());
     }
     public List<Member> members(String id) {
+        var owner=organizationOwner(id).id();
         return mongo.find(Query.query(Criteria.where("organizationId").is(id)),Account.class).stream()
-            .map(a->new Member(a.name(),a.contact(),a.role(),"Active")).toList();
+            .map(a->new Member(a.id(),a.name(),a.contact(),owner.equals(a.id())?"Owner":"Recruiter",membershipActive(a)?"Active":"Suspended")).toList();
     }
     public void notify(String ownerId,String title,String message,String reference) {
         if(ownerId!=null)mongo.insert(new Notification(UUID.randomUUID().toString(),ownerId,title,message,reference,Instant.now(),false));
@@ -179,7 +204,8 @@ public class PlatformService implements UserDetailsService {
     public record OrganizationInput(@NotBlank @Size(max=160) String name,@NotNull @Size(max=160) String industry,@NotNull @Size(max=160) String location,@NotNull @Size(max=240) String website,@Min(0) long expectedVersion){}
     public record Decision(@NotBlank String status,@NotBlank @Size(max=2000) String reason,boolean reviewed,@Min(0) long expectedVersion){}
     public record OrganizationDecision(@NotBlank String status,@NotBlank @Size(max=2000) String reason,boolean reviewed,@Min(0) long expectedVersion,@Size(max=5) List<String> reviewedDocumentIds){}
-    public record Member(String name,String email,String role,String status){}
+    @Document("organization_owners") public record Ownership(@Id String id,String ownerId){}
+    public record Member(String id,String name,String email,String role,String status){}
     @Document("notifications") public record Notification(@Id String id,@Indexed String ownerId,String title,String message,String reference,Instant createdAt,boolean read){}
     @Document("profiles") public record Profile(@Id String id,String role,String experience,String education,List<String> skills,Instant updatedAt){}
     public record ProfileInput(@NotNull @Size(max=160) String role,@NotNull @Size(max=6000) String experience,@NotNull @Size(max=1000) String education,@NotNull @Size(max=30) List<@NotBlank @Size(max=100) String> skills){}
