@@ -21,7 +21,7 @@ Your organization's current status and saved job drafts are shown in the Employe
 4. Ask the person acting as platform administrator to review the submission. While Pending, save job drafts; publishing is unavailable.
 5. After approval, click Refresh data, open Jobs > Draft > Edit, complete the fields, confirm the no-fee policy and publish.
 
-The organization owner can open Settings > Verification documents and choose **Cancel verification request** while the status is Pending. Confirm the cancellation; the organization and its documents stay saved, but administrators cannot approve that cancelled request. Choose **Request verification again** to return it to Pending. Uploading or removing a supporting document also starts a new Pending review. Only the organization owner can cancel or resubmit; stale version numbers are rejected.
+Only a platform administrator can cancel or reopen a verification request. Employers can still edit their organization details and supporting documents. While a request is Cancelled, those changes do not return it to Pending; the employer should contact the administrator if review should resume.
 
 Save as draft does not require business approval, salary, a complete description, requirements or the no-fee confirmation. Choose a job position to identify the draft. The UI keeps the Save as draft control visible, opens the Draft filter after saving, and retains saved records on refresh. Drafts are not visible in the public job listing. Publishing still validates every required field and the organization status on the server.
 
@@ -34,7 +34,9 @@ Save as draft does not require business approval, salary, a complete description
 5. Choose Approve organization when the evidence supports your decision, or Request changes and explain what is missing. A change request can be sent when no files have been uploaded.
 6. The decision, administrator, date, organization version, document descriptions and SHA-256 fingerprints are saved. The employer receives an in-app notification. Email delivery is not configured.
 
-The Organizations page opens on **Pending review**. Choose **Verified**, **Changes requested** or **Cancelled** to see one status at a time. In Cancelled, **Clear all** asks for confirmation and hides all cancelled requests from the admin list. It does not delete organization accounts, supporting documents or audit events. An owner can resubmit an archived cancelled request; it then reappears under Pending review.
+To stop a Pending verification request, open it in Admin, enter a reason of at least 20 characters, choose **Cancel verification request**, and confirm. The owner receives an in-app notification. The request moves to **Cancelled** and cannot be approved. Open a cancelled record, provide a reason and choose **Reopen for review** to return it to Pending. Employer and candidate accounts cannot call these admin actions; stale versions are rejected.
+
+The Organizations page opens on **Pending review**. Choose **Verified**, **Changes requested** or **Cancelled** to see one status at a time. In the admin Cancelled filter, **Clear all** asks for confirmation and hides cancelled requests from the default list. It does not delete organization accounts, supporting documents or audit events. **Show cleared** reveals those archived records again, so an administrator can reopen one if needed.
 
 Approval requires at least one current supporting file and acknowledgment of every current file. If the employer changes files or organization details while a review is open, the version check rejects a stale save. Refresh documents and inspect the current evidence again. Adding/removing a file sets the organization back to Pending; renaming it also requires another review. Existing jobs remain stored, but public visibility and new publishing are gated by Verified status.
 
@@ -45,14 +47,14 @@ Approval requires at least one current supporting file and acknowledgment of eve
 - `common/PrivateBusinessFiles.java` calls the local Python worker with its private service key. Browser requests cannot provide that key or choose arbitrary storage paths.
 - `document-worker/app.py` validates bounded PDF uploads and reads/writes private object bytes. No business-document OCR is presented as evidence of authenticity.
 - `PlatformService.verify` commits status, review history, audit and notifications together. An incomplete or stale approval rolls back.
-- `PlatformService.cancelVerification`, `resubmitVerification` and `clearCancelledOrganizations` enforce owner/admin roles, version checks and recorded audit events. Clearing sets an archive flag rather than deleting organizations.
+- `PlatformService.cancelVerification`, `reopenVerification` and `clearCancelledOrganizations` enforce admin-only actions, version checks and recorded audit events. Clearing sets an archive flag rather than deleting organizations.
 - Deletion first removes access and queues object removal in MongoDB. A retry worker attempts physical removal every minute. Historical decisions keep descriptions/checksums, not downloadable deleted files.
-- `organization-documents.tsx` handles upload, private in-browser PDF viewing, download, cancellation/resubmission and saved history. `pdf-preview.tsx` renders the private PDF with page, zoom and full-screen controls. `platform-admin.tsx` filters review statuses, clears cancelled requests and submits reviewed file IDs with the current organization version.
+- `organization-documents.tsx` handles upload, private in-browser PDF viewing, download and saved history. `pdf-preview.tsx` renders the private PDF with page, zoom and full-screen controls. `platform-admin.tsx` lets administrators cancel/reopen requests, filter review statuses, clear cancelled records and submit reviewed file IDs with the current organization version.
 - `recruiter-dialogs.tsx` keeps the job editor header/footer visible while form contents scroll. It sends Draft separately from Active; `JobController` only requires organization approval for Active jobs.
 
 ## Verification evidence and limits
 
-The complete 54-test backend suite passes, including organization/draft tests for evidence requirements, cross-company/role access, stale decisions/removal, invalid uploads, incomplete draft persistence, cancellation, clearing and resubmission. Frontend lint, typecheck and production build pass.
+The complete backend suite includes organization/draft tests for evidence requirements, cross-company/role access, stale decisions/removal, invalid uploads, incomplete draft persistence, admin-only cancellation, clearing and reopening. Frontend lint, typecheck and production build pass.
 
 An isolated browser rehearsal saved an incomplete draft, reloaded it, uploaded a synthetic PDF, signed in as a test administrator, reviewed the file, approved the organization, reloaded its history and published the original draft. None of those fixture records were added to the student's organizations.
 

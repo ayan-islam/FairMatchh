@@ -19,7 +19,7 @@ export function StatusBadge({
       ? "positive"
       : /Consider|Draft|Pending|Review|Scheduled|Interview/.test(text)
         ? "warning"
-        : /Needs review|Closed|Not selected|Held/.test(text)
+        : /Needs review|Closed|Cancelled|Not selected|Held/.test(text)
           ? "danger"
           : /Offer/.test(text)
             ? "purple"

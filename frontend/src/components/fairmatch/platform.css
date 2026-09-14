@@ -209,8 +209,6 @@
 .fs-organization-evidence .fs-form > button { justify-self: start; }
 .fs-verification-status { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 10px; }
 .fs-verification-status > p { flex: 1 1 220px; }
-.fs-verification-actions { display: grid; justify-items: start; gap: 12px; }
-.fs-verification-actions > p { color: #50647b; }
 .fs-cancelled-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin: 18px 0; padding: 14px 18px; border: 1px solid #dce7e7; border-radius: 9px; background: #f6faf9; }
 .fs-cancelled-actions p { flex: 1 1 280px; color: #50647b; font-size: 13px; line-height: 1.5; }
 .fs-organization-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; padding: 16px; border-radius: 8px; background: #f3f7f7; }

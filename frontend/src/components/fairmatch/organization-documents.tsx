@@ -27,7 +27,6 @@ export function OrganizationDocuments({ auth, adminOrgId, onLoaded, checkedIds =
   const [removing, setRemoving] = useState<string>();
   const [opened, setOpened] = useState<string[]>([]);
   const [preview, setPreview] = useState<Preview | null>(null);
-  const [confirmCancel, setConfirmCancel] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const base = adminOrgId ? `admin/organizations/${encodeURIComponent(adminOrgId)}/evidence` : "employer/organization/evidence";
   useEffect(() => {
@@ -84,27 +83,14 @@ export function OrganizationDocuments({ auth, adminOrgId, onLoaded, checkedIds =
       setRemoving(undefined); if (preview?.id === id) setPreview(null); setRevision(v => v + 1);
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
-  async function changeVerification(action: "cancel" | "resubmit") {
-    if (!bundle || busy) return;
-    setBusy(true); setError("");
-    try {
-      await request(`employer/organization/verification/${action}`, "POST", { expectedVersion: bundle.organization.version }, auth);
-      setConfirmCancel(false);
-      setRevision(value => value + 1);
-    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
-  }
   return <Panel className="fs-organization-evidence" title="Business verification documents" description="Private evidence for an administrator's organization review. Uploads are not a government verification.">
     <div className="fs-form">
       <div className="fs-verification-status"><StatusBadge>{bundle?.organization.status || "Loading…"}</StatusBadge>{bundle?.organization.reviewReason && <p>{bundle.organization.reviewReason}</p>}</div>
-      {!adminOrgId && bundle?.organization.status === "Pending" && <div className="fs-verification-actions">
-        {!confirmCancel ? <Button type="button" variant="outline" disabled={busy} onClick={() => setConfirmCancel(true)}>Cancel verification request</Button> :
-          <div className="fm-notice" role="alert"><div><p>Cancel this pending request? Administrators will no longer review it until you resubmit. Your organization and documents stay saved.</p><div className="fs-actions"><Button type="button" variant="outline" disabled={busy} onClick={() => setConfirmCancel(false)}>Keep request</Button><Button type="button" disabled={busy} onClick={() => void changeVerification("cancel")}>Confirm cancellation</Button></div></div></div>}
-      </div>}
-      {!adminOrgId && bundle?.organization.status === "Cancelled" && <div className="fs-verification-actions"><p>Your request is cancelled. Your documents are still saved.</p><Button type="button" disabled={busy} onClick={() => void changeVerification("resubmit")}>Request verification again</Button></div>}
+      {!adminOrgId && bundle?.organization.status === "Cancelled" && <p>Your verification request was cancelled by an administrator. Your documents remain saved. Contact the platform administrator if the request should be reopened.</p>}
       {adminOrgId && bundle && <dl className="fs-organization-details">
         {[['Organization', bundle.organization.name], ['Industry', bundle.organization.industry], ['Location', bundle.organization.location], ['Website', bundle.organization.website], ['Contact', bundle.organization.contact]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value?.trim() || "Not provided"}</dd></div>)}
       </dl>}
-      <p>Up to five PDFs, 8 MB and ten pages each. Adding or removing a document requires another administrator review. Files are available only to this organization and platform administrators.</p>
+      <p>Up to five PDFs, 8 MB and ten pages each. Adding or removing a document requires another administrator review unless the request is cancelled; only an administrator can reopen a cancelled request. Files are available only to this organization and platform administrators.</p>
       {error && <p role="alert" className="fm-error">{error}</p>}
       <Button variant="outline" disabled={busy} onClick={() => { onChecked?.([]); setOpened([]); setPreview(null); setRevision(v => v + 1); }}>Refresh documents</Button>
       {bundle?.documents.length === 0 && <p>No supporting documents uploaded. Approval requires at least one.</p>}

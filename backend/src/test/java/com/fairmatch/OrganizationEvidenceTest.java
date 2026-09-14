@@ -91,31 +91,43 @@ class OrganizationEvidenceTest {
         draft.put("status","Active");call(put("/api/employer/jobs/"+id),token,draft,409);
         assertThat(call(get("/api/employer/jobs"),token,null,200).get(0).get("status").asText()).isEqualTo("Draft");
     }
-    @Test void ownerCanCancelAndResubmitWhileAdminCanClearCancelledListWithoutDeletingTheOrganization()throws Exception{
+    @Test void onlyAdminCanCancelReopenAndClearVerificationRequests()throws Exception{
         var owner=register("EMPLOYER");var token=owner.get("token").asText();var org=owner.at("/user/organizationId").asText();var admin=admin();
-        var cancel="/api/employer/organization/verification/cancel";
-        var resubmit="/api/employer/organization/verification/resubmit";
+        var cancel="/api/admin/organizations/"+org+"/verification/cancel";
+        var reopen="/api/admin/organizations/"+org+"/verification/reopen";
         var candidate=register("CANDIDATE").get("token").asText();
-        call(post(cancel),candidate,Map.of("expectedVersion",0),403);
-        call(post(cancel),admin,Map.of("expectedVersion",0),403);
-        call(post(cancel),token,Map.of("expectedVersion",1),409);
-        var cancelled=call(post(cancel),token,Map.of("expectedVersion",0),200);
+        var reason="The submitted organization details need a new administrative review.";
+        var wrong=Map.of("expectedVersion",0,"reason",reason);
+        call(post(cancel),candidate,wrong,403);
+        call(post(cancel),token,wrong,403);
+        call(post("/api/employer/organization/verification/cancel"),token,wrong,404);
+        call(post(cancel),admin,Map.of("expectedVersion",1,"reason",reason),409);
+        call(post(cancel),admin,Map.of("expectedVersion",0,"reason","short"),400);
+        var cancelled=call(post(cancel),admin,wrong,200);
         assertThat(cancelled.get("status").asText()).isEqualTo("Cancelled");
         assertThat(cancelled.get("version").asLong()).isEqualTo(1);
+        assertThat(call(get("/api/admin/organizations/"+org+"/evidence"),admin,null,200).at("/history/0/status").asText()).isEqualTo("Cancelled");
         call(post("/api/admin/organizations/"+org+"/review"),admin,decision(1,List.of()),409);
-        call(post(cancel),token,Map.of("expectedVersion",1),409);
-        call(post("/api/admin/organizations/cancelled/clear"),token,Map.of(),403);
-        call(post("/api/admin/organizations/cancelled/clear"),admin,Map.of(),200);
-        var archived=call(get("/api/employer/organization"),token,null,200);
-        assertThat(archived.get("status").asText()).isEqualTo("Cancelled");
-        assertThat(archived.get("clearedFromAdmin").asBoolean()).isTrue();
-        assertThat(call(get("/api/admin/organizations"),admin,null,200).toString()).contains(org);
-        call(post(resubmit),token,Map.of("expectedVersion",0),409);
-        var pending=call(post(resubmit),token,Map.of("expectedVersion",1),200);
-        assertThat(pending.get("status").asText()).isEqualTo("Pending");
-        assertThat(pending.get("clearedFromAdmin").asBoolean()).isFalse();
-        assertThat(pending.get("version").asLong()).isEqualTo(2);
-        call(post(resubmit),token,Map.of("expectedVersion",2),409);
-        assertThat(call(get("/api/admin/audit"),admin,null,200).toString()).contains("ORGANIZATION_VERIFICATION_CANCELLED","CANCELLED_ORGANIZATIONS_CLEARED","ORGANIZATION_VERIFICATION_RESUBMITTED");
+        call(post(cancel),admin,Map.of("expectedVersion",1,"reason",reason),409);
+        var edited=call(put("/api/employer/organization"),token,Map.of("name","Renamed synthetic organization","industry","Test","location","Dhaka","website","","expectedVersion",1),200);
+        assertThat(edited.get("status").asText()).isEqualTo("Cancelled");
+        try{
+            upload(token,2);
+            assertThat(call(get("/api/employer/organization"),token,null,200).get("status").asText()).isEqualTo("Cancelled");
+            call(post("/api/admin/organizations/cancelled/clear"),token,Map.of(),403);
+            call(post("/api/admin/organizations/cancelled/clear"),admin,Map.of(),200);
+            var archived=call(get("/api/employer/organization"),token,null,200);
+            assertThat(archived.get("status").asText()).isEqualTo("Cancelled");
+            assertThat(archived.get("clearedFromAdmin").asBoolean()).isTrue();
+            assertThat(call(get("/api/admin/organizations"),admin,null,200).toString()).contains(org);
+            call(post(reopen),token,Map.of("expectedVersion",3,"reason",reason),403);
+            call(post(reopen),admin,Map.of("expectedVersion",2,"reason",reason),409);
+            var pending=call(post(reopen),admin,Map.of("expectedVersion",3,"reason",reason),200);
+            assertThat(pending.get("status").asText()).isEqualTo("Pending");
+            assertThat(pending.get("clearedFromAdmin").asBoolean()).isFalse();
+            assertThat(pending.get("version").asLong()).isEqualTo(4);
+            call(post(reopen),admin,Map.of("expectedVersion",4,"reason",reason),409);
+            assertThat(call(get("/api/admin/audit"),admin,null,200).toString()).contains("ORGANIZATION_VERIFICATION_CANCELLED","CANCELLED_ORGANIZATIONS_CLEARED","ORGANIZATION_VERIFICATION_REOPENED");
+        }finally{cleanup(token);}
     }
 }
