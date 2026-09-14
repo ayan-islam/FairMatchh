@@ -31,6 +31,7 @@ public class JobService {
   public JobView requireOpen(String id) { var j=publicJob(id);if(j.closes().isBefore(LocalDate.now(ZoneId.of("Asia/Dhaka"))))throw new ApiException(HttpStatus.CONFLICT,"This job is no longer accepting applications.");return j; }
   public String organizationForOpenJob(String id) { requireOpen(id);return jobs.findById(id).orElseThrow().organizationId(); }
   public void countApplication(String id) { mongo.updateFirst(Query.query(Criteria.where("_id").is(id)),new Update().inc("applications",1),JobDocument.class); }
+  public void removeApplicationCount(String id) { mongo.updateFirst(Query.query(Criteria.where("_id").is(id).and("applications").gt(0)),new Update().inc("applications",-1),JobDocument.class); }
   @Transactional
   public JobView save(String organizationId,String id,JobRequest request) {
     if(request.status().equals("Active")) {

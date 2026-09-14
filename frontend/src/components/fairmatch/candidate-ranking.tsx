@@ -19,7 +19,7 @@ type AutoRow = { applicationId:string; rank:number; score:number; matched:number
 type Board = { jobId:string; jobTitle:string; stage:string; snapshot:string; requirements:string[]; rubric:Rubric|null; rubricCurrent:boolean; autoRanked:AutoRow[]; ranked:Row[]; pending:Row[]; rubricHistory:Rubric[] };
 type Report = { applicationId:string; stage:string; snapshot:string; rubric:Rubric; sources:{field:string;text:string}[]; latestReview:Review|null; current:boolean; version:number; history:Review[] };
 const ratings=["0 - Not demonstrated after assessment","1 - Limited demonstration","2 - Partial demonstration","3 - Meets the requirement","4 - Exceeds the requirement"];
-const stages=["New","Shortlisted","Interview","Offer","Hired","Not selected","Withdrawn"];
+const stages=["New","Shortlisted","Interview","Offer","Hired","Not selected"];
 const sourceLabels:Record<string,string>={experience:"Work experience",education:"Education",skills:"Skills",example:"Work example",none:"No supporting passage"};
 export function CandidateRanking({jobs,auth,initialJobId}:{jobs:Job[];auth:string;initialJobId?:string}) {
  const [jobId,setJobId]=useState(initialJobId||jobs[0]?.id||"");

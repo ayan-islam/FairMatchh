@@ -9,6 +9,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.*;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.bson.Document;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -18,7 +20,7 @@ import static org.assertj.core.api.Assertions.*;
 class PlatformFeaturesTest {
     static final String DATABASE="fairmatch_platform_test_"+UUID.randomUUID().toString().replace("-","");
     @DynamicPropertySource static void database(DynamicPropertyRegistry r){r.add("spring.data.mongodb.uri",()->"mongodb://127.0.0.1:27018/"+DATABASE+"?replicaSet=fairmatch-rs");}
-    @Autowired MockMvc mvc;@Autowired ObjectMapper json;
+    @Autowired MockMvc mvc;@Autowired ObjectMapper json;@Autowired MongoTemplate mongo;
     JsonNode call(MockHttpServletRequestBuilder method,String token,Object body,int expected) throws Exception {
         if(token!=null)method.header("Authorization","Bearer "+token);
         if(body!=null)method.contentType("application/json").content(json.writeValueAsString(body));
@@ -89,9 +91,16 @@ class PlatformFeaturesTest {
         assertThat(call(get("/api/account/notifications"),token,null,200).size()).isGreaterThanOrEqualTo(4);
         call(post("/api/candidate/applications/"+id+"/withdrawal"),stranger,Map.of(),404);
         call(post("/api/candidate/applications/"+id+"/withdrawal"),token,Map.of(),200);
-        assertThat(call(get("/api/candidate/interviews"),token,null,200).get(0).get("status").asText()).isEqualTo("Cancelled");
-        assertThat(call(get("/api/candidate/applications"),token,null,200).get(0).get("stage").asText()).isEqualTo("Withdrawn");
-        call(patch("/api/employer/applications/"+id+"/stage"),employer,Map.of("stage","Offer","expectedStage","Withdrawn","reason","Trying to reopen a withdrawn application incorrectly."),409);
+        assertThat(call(get("/api/candidate/interviews"),token,null,200).size()).isZero();
+        assertThat(call(get("/api/candidate/applications"),token,null,200).size()).isZero();
+        assertThat(call(get("/api/employer/applications"),employer,null,200).toString()).doesNotContain(id);
+        assertThat(mongo.getCollection("application_messages").countDocuments(new Document("applicationId",id))).isZero();
+        assertThat(mongo.getCollection("interviews").countDocuments(new Document("candidateId",id))).isZero();
+        assertThat(mongo.getCollection("notifications").countDocuments(new Document("reference",id))).isZero();
+        assertThat(call(get("/api/employer/jobs"),employer,null,200).toString()).contains("\"applications\":0");
+        call(patch("/api/employer/applications/"+id+"/stage"),employer,Map.of("stage","Offer","expectedStage","Interview","reason","Trying to reopen a removed application incorrectly."),404);
+        var reapplied=call(post("/api/candidate/jobs/"+jobId+"/applications"),token,application(),201).get("id").asText();
+        assertThat(reapplied).isNotEqualTo(id);
     }
     @Test void supportResponsesAndFairnessReviewsArePersistedWithStaleProtection() throws Exception {
         var token=register("CANDIDATE").get("token").asText();var admin=login("admin","LocalTestAdmin!2026");

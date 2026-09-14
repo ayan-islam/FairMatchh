@@ -513,8 +513,7 @@ export function CandidateWorkspace({
           <DialogHeader>
             <DialogTitle>Withdraw this application?</DialogTitle>
             <DialogDescription>
-              The employer will see Withdrawn. Your record and activity history
-              remain saved.
+              This permanently removes the application from your account and the employer workspace, including its messages, assessments and interviews. You may apply to the job again later.
             </DialogDescription>
           </DialogHeader>
           {error && <p role="alert">{error}</p>}
@@ -527,7 +526,7 @@ export function CandidateWorkspace({
               void run(async () => {
                 if (withdraw) await platformApi.withdraw(withdraw.id, auth);
                 setWithdraw(null);
-              }, "Application withdrawn.")
+              }, "Application withdrawn and removed.")
             }
           >
             Confirm withdrawal

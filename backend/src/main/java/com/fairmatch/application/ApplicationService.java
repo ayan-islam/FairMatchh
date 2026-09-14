@@ -95,13 +95,35 @@ public class ApplicationService {
     @Transactional public void withdraw(String ownerId,String id) {
         var old=applications.findByIdAndOwnerId(id,ownerId).orElseThrow(()->new ApiException(HttpStatus.NOT_FOUND,"Application not found."));
         if(Set.of("Hired","Not selected","Withdrawn").contains(old.stage()))throw new ApiException(HttpStatus.CONFLICT,"This application already has a final outcome.");
-        var result=mongo.updateFirst(Query.query(Criteria.where("_id").is(id).and("ownerId").is(ownerId).and("stage").is(old.stage())),
-            new Update().set("stage","Withdrawn").set("stageReason","Candidate withdrew the application.").set("stageChangedAt",Instant.now()),ApplicationDocument.class);
-        if(result.getModifiedCount()!=1)throw new ApiException(HttpStatus.CONFLICT,"Application changed. Refresh and try again.");
-        audit.record(old.organizationId(),"APPLICATION_WITHDRAWN",id,"Candidate initiated withdrawal",ownerId);
-        platform.notify(ownerId,"Application withdrawn","Your withdrawal has been recorded.",id);
-        platform.notifyOrganization(old.organizationId(),"Application withdrawn","The candidate withdrew this application.",id);
-        events.publishEvent(new FinalDecision(old.organizationId(),id,"Candidate withdrew the application.",ownerId));
+        var removed=mongo.findAndRemove(Query.query(Criteria.where("_id").is(id).and("ownerId").is(ownerId).and("stage").is(old.stage())),ApplicationDocument.class);
+        if(removed==null)throw new ApiException(HttpStatus.CONFLICT,"Application changed. Refresh and try again.");
+        purgeLinkedRecords(removed);
+        audit.record(old.organizationId(),"APPLICATION_WITHDRAWN_REMOVED",old.jobId(),"A candidate withdrew an application; its operational records were removed.","candidate-self-service");
+    }
+    private void purgeLinkedRecords(ApplicationDocument application) {
+        var id=application.id();
+        var interviews=mongo.find(Query.query(Criteria.where("candidateId").is(id)),org.bson.Document.class,"interviews");
+        var references=new ArrayList<String>();references.add(id);interviews.forEach(i->references.add(i.getString("_id")));
+        mongo.remove(Query.query(Criteria.where("applicationId").is(id)),"application_messages");
+        mongo.remove(Query.query(new Criteria().orOperator(Criteria.where("applicationId").is(id),Criteria.where("_id").is(id))),"criteria_reviews");
+        mongo.remove(Query.query(Criteria.where("review.applicationId").is(id)),"criteria_review_history");
+        mongo.remove(Query.query(Criteria.where("applicationId").is(id)),"ranking_reviews");
+        mongo.remove(Query.query(Criteria.where("review.applicationId").is(id)),"ranking_review_history");
+        mongo.remove(Query.query(Criteria.where("candidateId").is(id)),"interviews");
+        mongo.remove(Query.query(Criteria.where("reference").in(references)),"notifications");
+        mongo.remove(Query.query(Criteria.where("reference").is(id)),"support_cases");
+        mongo.remove(Query.query(new Criteria().orOperator(Criteria.where("reference").in(references),Criteria.where("detail").regex(java.util.regex.Pattern.quote(id)))),"audit_events");
+        mongo.remove(Query.query(Criteria.where("_id").is(application.ownerId()+":"+application.jobId()).and("ownerId").is(application.ownerId())),"application_drafts");
+        jobs.removeApplicationCount(application.jobId());
+    }
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    @Transactional public void removeLegacyWithdrawnApplications() {
+        var withdrawn=mongo.find(Query.query(Criteria.where("stage").is("Withdrawn")),ApplicationDocument.class);
+        for(var application:withdrawn) {
+            mongo.remove(Query.query(Criteria.where("_id").is(application.id())),ApplicationDocument.class);
+            purgeLinkedRecords(application);
+            audit.record(application.organizationId(),"APPLICATION_WITHDRAWN_REMOVED",application.jobId(),"A legacy withdrawn application and its operational records were removed.","system");
+        }
     }
     public record FinalDecision(String organizationId,String applicationId,String reason,String actor){}
     @Transactional public BlindApplication review(String org,String id,ReviewRequest r,String actor) {

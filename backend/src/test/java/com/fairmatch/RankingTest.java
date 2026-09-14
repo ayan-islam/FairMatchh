@@ -120,7 +120,10 @@ class RankingTest {
   items.get(0).put("source",report.at("/sources/4/field").asText());items.get(0).put("quote","I added integration tests to my Java API");
   call(post(path),t,payload,200);assertThat(call(get(base(j)),t,null,200).get("ranked").size()).isEqualTo(1);
   call(post("/api/candidate/applications/"+a+"/withdrawal"),candidate,Map.of(),200);
-  var withdrawn=call(get(base(j)+"?stage=Withdrawn"),t,null,200);assertThat(withdrawn.get("ranked").size()).isZero();assertThat(withdrawn.at("/pending/0/status").asText()).isEqualTo("Outside active ranking");
+  assertThat(call(get(base(j)),t,null,200).get("autoRanked").size()).isZero();
+  assertThat(call(get(base(j)),t,null,200).get("pending").size()).isZero();
+  assertThat(mongo.getCollection("ranking_reviews").countDocuments(new Document("applicationId",a))).isZero();
+  assertThat(mongo.getCollection("ranking_review_history").countDocuments(new Document("review.applicationId",a))).isZero();
  }
  @Test void simultaneousReviewSavesCommitOnceAndReturnARecoverableConflict()throws Exception{
   var t=employer();var j=create(t);rubric(t,j);var a=apply(j,register("CANDIDATE"));var path=base(j)+"/applications/"+a;var report=call(get(path),t,null,200);var payload=json.writeValueAsString(input(report,4,3,3,2));

@@ -209,7 +209,7 @@ The same candidate contact cannot create repeated applications for the same job.
 
 ### Follow-up actions
 
-**Supporting information** opens the saved conversation with the employer. **Withdraw** changes the candidate-owned application's status and retains its history; demonstrate withdrawal only on a record intended for that purpose. Candidate-visible interviews, notifications and support requests are separate tabs.
+**Supporting information** opens the saved conversation with the employer. **Withdraw** asks for confirmation, then permanently removes the candidate-owned application and its linked operational records. It disappears from both workspaces, the job becomes available to apply for again and the job application count decreases. FairMatch retains only a non-identifying audit event stating that a withdrawal occurred. Candidate-visible interviews, notifications and support requests are separate tabs.
 
 ### Code to open
 
@@ -228,7 +228,7 @@ The same candidate contact cannot create repeated applications for the same job.
 4. Use **Supporting information** to request a relevant clarification. Switch to Candidate, reply on that application, then return to Employer to show the saved reply.
 5. Open **Hiring pipeline**. Move the application to a suitable stage and enter a job-related reason. Refresh and show that the card stays in that stage.
 
-Each of the five visible pipeline columns scrolls internally as cards grow, rather than expanding with every new application. Other statuses, such as Not selected or Withdrawn, are handled separately from those active columns.
+Each of the five visible pipeline columns scrolls internally as cards grow, rather than expanding with every new application. Not selected records are handled separately from those active columns. A withdrawn application is permanently removed, so it cannot remain in the pipeline or ranking views.
 
 ### Three different records
 
