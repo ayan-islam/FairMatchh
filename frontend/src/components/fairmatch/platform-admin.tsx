@@ -20,11 +20,15 @@ import {
 import { exportCsv } from "@/lib/demo-data";
 import { toast } from "sonner";
 import { OrganizationDocuments, type OrganizationEvidence } from "./organization-documents";
+const organizationStatuses = ["Pending", "Verified", "Changes requested"] as const;
+type OrganizationStatus = (typeof organizationStatuses)[number];
+
 export function PlatformAdmin({ auth }: { auth: string }) {
   const [orgs, setOrgs] = useState<Organization[]>([]);
   const [cases, setCases] = useState<SupportCase[]>([]);
   const [audit, setAudit] = useState<RawAudit[]>([]);
   const [tab, setTab] = useState("Organizations");
+  const [organizationStatus, setOrganizationStatus] = useState<OrganizationStatus>("Pending");
   const [query, setQuery] = useState("");
   const [revision, setRevision] = useState(0);
   const [org, setOrg] = useState<Organization | null>(null);
@@ -35,6 +39,13 @@ export function PlatformAdmin({ auth }: { auth: string }) {
   const [reviewed, setReviewed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const visibleOrganizations = orgs.filter(
+    (organization) =>
+      organization.status === organizationStatus &&
+      (organization.name + organization.id + organization.status)
+        .toLowerCase()
+        .includes(query.trim().toLowerCase()),
+  );
   useEffect(() => {
     let cancelled = false;
     void Promise.all([
@@ -105,7 +116,7 @@ export function PlatformAdmin({ auth }: { auth: string }) {
         />
         <Metric
           label="Pending review"
-          value={orgs.filter((o) => o.status !== "Verified").length}
+          value={orgs.filter((o) => o.status === "Pending").length}
           note="Require an administrator decision"
         />
         <Metric
@@ -130,18 +141,28 @@ export function PlatformAdmin({ auth }: { auth: string }) {
           {error}
         </p>
       )}
-      <Field label="Search records">
+      {tab === "Organizations" && (
+        <div className="fs-admin-status-filters" role="group" aria-label="Filter organizations by verification status">
+          {organizationStatuses.map((status) => (
+            <Button
+              key={status}
+              type="button"
+              variant={organizationStatus === status ? "default" : "outline"}
+              aria-pressed={organizationStatus === status}
+              onClick={() => setOrganizationStatus(status)}
+            >
+              {status === "Pending" ? "Pending review" : status}
+              <span className="fs-admin-status-count">{orgs.filter((organization) => organization.status === status).length}</span>
+            </Button>
+          ))}
+        </div>
+      )}
+      <Field label={tab === "Organizations" ? "Search organizations" : "Search records"}>
         <Input value={query} onChange={(e) => setQuery(e.target.value)} />
       </Field>
       {tab === "Organizations" && (
-        <div className="fs-cards">
-          {orgs
-            .filter((o) =>
-              (o.name + o.id + o.status)
-                .toLowerCase()
-                .includes(query.toLowerCase()),
-            )
-            .map((o) => (
+        <div className="fs-cards fs-organization-cards" aria-live="polite">
+          {visibleOrganizations.map((o) => (
               <Panel key={o.id}>
                 <StatusBadge>{o.status}</StatusBadge>
                 <h2>{o.name}</h2>
@@ -164,6 +185,12 @@ export function PlatformAdmin({ auth }: { auth: string }) {
                 </Button>
               </Panel>
             ))}
+          {visibleOrganizations.length === 0 && (
+            <Panel>
+              <h2>{organizationStatus === "Changes requested" ? "No organizations awaiting changes" : `No ${organizationStatus.toLowerCase()} organizations found`}</h2>
+              <p>{query.trim() ? "Try another search or choose a different status." : "Choose another status to view those organizations."}</p>
+            </Panel>
+          )}
         </div>
       )}
       {tab === "Support & appeals" && (
