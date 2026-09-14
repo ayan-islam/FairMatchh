@@ -16,7 +16,7 @@ Read **PROJECT_DEMONSTRATION_GUIDE.md** for the current presentation script, arc
 
 ## Working workflows
 
-**Candidate ranking:** Employer > Candidate ranking compares completed human assessments for a selected job and hiring stage. Configure weights and rating definitions, cite submitted evidence, then save ratings. Scores, explanations and version history persist; incomplete or stale assessments remain unranked. See [CANDIDATE_RANKING_GUIDE.md](CANDIDATE_RANKING_GUIDE.md) for operation and code explanations.
+**Candidate ranking:** Employer > Candidate ranking now automatically orders applications by explained text matches against the selected job requirements. Recruiters do not need to rate every candidate to get a first-pass order. A saved rubric supplies custom weights; otherwise requirements have equal weights. Private CV PDFs are excluded, but candidate-confirmed details submitted in an application are included. Optional human rubric assessments remain separate, with evidence quotes and history. Text match is not verified competence or an automatic hiring decision. See [CANDIDATE_RANKING_GUIDE.md](CANDIDATE_RANKING_GUIDE.md).
 
 **Team access:** An organization owner creates a one-use, email-bound recruiter invitation in Settings > Team & access. A teammate opens Employer > Join an organization on the same FairMatch installation and creates their own account. Recruiters can work on hiring records but cannot manage membership or business verification files. The owner can suspend and restore access; suspension revokes saved sessions. Invitations are shared manually and do not verify email inbox ownership. See **TEAM_ACCESS_GUIDE.md**.
 
@@ -34,7 +34,7 @@ The frontend build uses Node.js 22.13+ (Node.js 24 on this laptop). PDF.js rende
 
 Keep the entire **data** folder: MongoDB records, MinIO objects and local signing/service keys live there. Do not delete it to restart. Existing jobs and anonymous applications are preserved. Old anonymous applications are not automatically assigned to new accounts based on an unverified email address.
 
-All services bind locally. No online deployment is configured or required for the September 15 assessment. Email verification/recovery, revocable sessions and SMTP retries are implemented; actual delivery still requires a configured sender account. Team invitations work on the same local installation and are shared manually. Payments, SMS, advanced matching/fairness and automated retention remain unfinished.
+All services bind locally. No online deployment is configured or required for the September 15 assessment. Email verification/recovery, revocable sessions and SMTP retries are implemented; actual delivery still requires a configured sender account. Team invitations work on the same local installation and are shared manually. Payments, SMS, semantic skill matching, fairness validation and automated retention remain unfinished.
 
 ## Tests and rebuild
 
@@ -50,7 +50,7 @@ npm.cmd run typecheck
 
 Before replacing a running build, stop only the FairMatch backend and frontend processes. Windows locks the running JAR, and Next.js reads its production build while serving. Then run `.\mvnw.cmd -DskipTests package` **from the backend folder**, `npm.cmd run build` **from the frontend folder**, and the root launcher again. Prefer the commands in **REBUILD_FAIRMATCH.ps1**, which performs the scoped stop, tests, build and restart.
 
-The latest full backend run has **53 passing tests** (`logs/team-full-build.log`), including seven ranking and seven team-access tests. Frontend lint, TypeScript and production compilation passed in the same build. An isolated browser check verified invitation redemption, shared organization membership, read-only recruiter settings, persistence after reload, owner suspension and session revocation. Eleven Python extraction/OCR/storage tests passed earlier. `logs/fullstack-restart-result.json` records the earlier packaged-backend restart test. Complete the guide's manual rehearsal before the assessment.
+The latest full backend run has **55 passing tests** (`backend/target/surefire-reports`), including automatic ranking without manual ratings. Frontend lint, TypeScript and production compilation passed. The packaged app was restarted and both frontend and backend returned HTTP 200. Earlier isolated browser checks verified team access and ranking persistence. Eleven Python extraction/OCR/storage tests passed earlier. Complete the guide's manual rehearsal before the assessment.
 
 Eight additional backup safety tests pass. A full cold-backup restore rehearsal opened copied MongoDB/MinIO stores on separate ports, matched database collection hashes/counts and downloaded both stored PDFs. See `logs/backup-restore-result.json`. CV extraction/confirmation, candidate privacy actions and persisted requirement reviews were also checked in the browser against a separate test database; see `logs/fullstack-ui-result.json`.
 
@@ -70,4 +70,4 @@ Employer > Applications > Review evidence records an assessment, exact submitted
 
 ## Business verification and drafts
 
-Read **ORGANIZATION_VERIFICATION_GUIDE.md** for employer uploads, administrator login/review and reopening job drafts. Private supporting files, current-document checks, decision history and version protection are connected to the backend. The earlier 39-test milestone and isolated browser draft-to-approval-to-publication rehearsal passed; the current suite has 53 passing tests.
+Read **ORGANIZATION_VERIFICATION_GUIDE.md** for employer uploads, administrator login/review and reopening job drafts. Private supporting files, current-document checks, decision history and version protection are connected to the backend. The earlier 39-test milestone and isolated browser draft-to-approval-to-publication rehearsal passed; the current suite has 55 passing tests.

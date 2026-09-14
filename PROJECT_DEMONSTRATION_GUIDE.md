@@ -3,7 +3,7 @@
 
 **A practical script for your project presentation, live demonstration and viva.**
 
-Prepared from the local implementation on 12 September 2026. Project folder: `C:\Users\HP\Desktop\fairmatch`.
+Prepared from the local implementation on 14 September 2026. Project folder: `C:\Users\HP\Desktop\fairmatch`.
 
 > Your opening: "FairMatch is a recruitment application for employers, candidates and administrators. It connects job publishing, candidate applications, evidence review, explainable ranking and hiring stages. The core records are saved in a backend database, so the work survives refresh and restart."
 
@@ -235,7 +235,8 @@ Each of the five visible pipeline columns scrolls internally as cards grow, rath
 | Record | Meaning | Changes hiring stage? |
 | --- | --- | --- |
 | Requirement review | Human evidence bands per requirement | No |
-| Candidate ranking | Weighted 0-4 assessment and comparison | No |
+| Automatic ranking | Weighted text match of submitted application evidence | No |
+| Optional rubric assessment | Weighted 0-4 human assessment and comparison | No |
 | Stage change | Explicit recruiter decision with a reason | Yes |
 
 The evidence-band summary is Strong evidence when every requirement is Supported; Consider when some evidence is Supported or Partial; otherwise Needs review. It is not automatically converted into a numerical ranking. Free text may still reveal identity, so blind presentation is not guaranteed anonymization.
@@ -249,32 +250,34 @@ The evidence-band summary is Strong evidence when every requirement is Supported
 <!-- page -->
 # 10. Configure and operate candidate ranking
 
-### Set the rubric first
+### Show the automatic result first
 
-1. Open **Employer > Candidate ranking**, select the job and choose a hiring stage. Or open **Jobs > Ranking setup**.
-2. Select **Configure scoring rubric**. Each job requirement becomes one criterion.
-3. Set integer weights totaling exactly **100%**. Edit all five rating descriptions so they describe concrete evidence for that job.
-4. Mark an essential criterion only when justified by the work, and explain why. Essential criteria rated below 3 or not yet assessed receive a visible clarification flag; they do not trigger automatic rejection.
-5. Record the rubric reason, confirm consistent use and save. Prefer doing this while the job is still a draft, before reviewing applicants.
+1. Open **Employer > Candidate ranking** and choose a job and stage. Every application appears in **Automatic evidence ranking** without recruiter ratings.
+2. Open **Why this position?** to show matched words, the submitted passage and points. Refresh after a new application or candidate reply to see the order change.
+3. Explain that this measures text overlap, not ability. A rubric supplies weights; otherwise weights are equal. Private CVs are excluded. Recruiters inspect the evidence before decisions.
+
+### Configure optional deeper assessment
+
+1. Choose **Configure scoring rubric**. Give every requirement a weight; weights total **100%**. Define concrete evidence for ratings 0–4.
+2. Justify any essential requirement, record the rubric reason and save. Set this up while the job is a draft if possible.
 
 ### Assess and explain
 
-1. Open **Assess candidate** in the Assessment queue.
-2. Read the criterion's rating definitions. Select **0-4** only after reviewing it. Leave missing or unclear evidence **Not assessed**.
-3. For each positive rating, select a source, copy an exact passage and explain the rating in at least 15 characters. Sources include submitted fields and the latest 20 candidate clarification replies.
-4. Confirm and save. Incomplete assessments can be saved; they stay unranked without a total.
-5. Open **Why this result?** to show points, quotes, reasons, reviewer, time and versions. **Export this comparison** downloads the selected job/stage comparison as CSV.
+1. Open **Assess candidate**. Use 0–4 only after reviewing evidence; leave unclear items **Not assessed**.
+2. Cite an exact submitted passage and explain each positive rating. Save, then open **Why this result?** for the weighted points and history. An incomplete human assessment stays outside the human-ranked list.
 
 ### Expected behavior
 
-Only complete, current assessments appear in the numbered ranking. Equal totals share a rank. Comparisons are within one job and hiring stage, never a universal ranking across unrelated roles. A score is a rubric result, not a probability of success.
+The automatic list orders every application; the human list ranks only complete, current assessments. Equal totals share a rank. Results are per job and stage. Neither score predicts success or changes a hiring stage.
 
-> Say: "The recruiter evaluates the evidence against a consistent rubric. Java calculates the total and exposes every contribution. We deliberately keep missing evidence separate from a rating of zero."
+> Say: "Java creates a first-pass order automatically from submitted text and shows why each item matched. The recruiter can then inspect candidates and optionally do a deeper rubric assessment. We never turn a missing text match into a claim that someone lacks a skill."
 
-Code: `candidate-ranking.tsx` and `application/RankingController.java`. The implementation does not automatically import interview evaluations, infer ratings from CV keywords or make hiring decisions.
+Code: `candidate-ranking.tsx`, `application/AutomaticEvidenceMatcher.java` and `application/RankingController.java`. The implementation does not automatically import interview evaluations, read private CVs for employer ranking or make hiring decisions.
 
 <!-- page -->
-# 11. Explain the ranking calculation
+# 11. Explain the two ranking calculations
+
+**Automatic text match:** for each requirement, count distinct substantive requirement words in the best single submitted passage. Its points are `weight × matched words ÷ requirement words`. Sum points and sort descending. The source and matching words appear under **Why this position?**. This is an evidence-finding aid, not a competence rating.
 
 ### A worked example
 
@@ -361,7 +364,7 @@ Start from `C:\Users\HP\Desktop\fairmatch\frontend`. Use **Ctrl+P** to open a fi
 | src/components/fairmatch/recruiter-dialogs.tsx | Job fields, draft/publish steps and StageDialog. Forms call provided save functions. |
 | src/components/fairmatch/team-access.tsx | Join form, invitation creation and member access controls. |
 | src/components/fairmatch/candidate-workspace.tsx | Exact linked-job filtering, profile, drafts, application submission and candidate tabs. Find linkedJob. |
-| src/components/fairmatch/candidate-ranking.tsx | CandidateRanking, RubricEditor, RankingReview and RankingRows. Separates rubric setup, entered ratings and explanations. |
+| src/components/fairmatch/candidate-ranking.tsx | Automatic ranking, match explanations, optional rubric setup and human assessments. |
 | src/lib/api.ts; src/lib/platform-api.ts | HTTP requests, typed responses, authentication headers and backend error messages. |
 | src/components/ui/; src/components/fairmatch/shared.tsx | Reusable buttons, dialogs, inputs, labels, panels and common layout. |
 
@@ -423,7 +426,7 @@ Representative request body, using a rehearsal application:
 
 ### Second example: saving a ranking assessment
 
-`RankingReview` collects ratings, source quotes and reasons. POST `/api/employer/jobs/{jobId}/ranking/applications/{id}` sends the source snapshot and expected review version. Java rejects invalid sources, invented quotes, non-integer ratings and stale versions, then calculates and saves the review/history. GET on the job's ranking endpoint returns ranked and pending rows.
+`RankingReview` collects optional human ratings, source quotes and reasons. POST `/api/employer/jobs/{jobId}/ranking/applications/{id}` sends the source snapshot and expected review version. Java rejects invalid sources, invented quotes, non-integer ratings and stale versions, then saves the review/history. GET on the ranking endpoint returns the automatic order alongside the human-ranked and pending rows.
 
 > Say: "The important boundary is the server. The browser requests a change; it cannot choose another company, overwrite a newer decision or dictate an arbitrary saved total. A successful response comes after the backend has accepted the operation."
 
@@ -514,7 +517,7 @@ Email challenges, revocable sessions and an SMTP outbox are implemented. Actual 
 
 ### Evidence you can show
 
-The latest complete backend run recorded **53 tests, zero failures and zero errors** in `logs/team-full-build.log`: the earlier 46 plus seven team-access tests. Frontend lint, TypeScript and production build passed in that run. These are verification records from September 12, not a fresh test run every time this guide is opened.
+The latest complete backend run on September 14 recorded **55 tests, zero failures and zero errors** in `backend/target/surefire-reports`, including automatic ranking without recruiter ratings. Frontend lint, TypeScript and production build passed. The packaged laptop app restarted and both web and backend health checks returned HTTP 200.
 
 `logs/ranking-ui-result.json` records browser creation of a rubric, a 75/100 completed assessment and a saved incomplete assessment. Their quotes, explanations and history survived browser reload and a packaged backend restart. Desktop and narrow mobile dialog controls were checked. Real applicant ratings were not altered for those checks.
 
@@ -538,7 +541,7 @@ For development, the root `REBUILD_FAIRMATCH.ps1` coordinates rebuilding and res
 
 ### "What makes this fullstack?"
 
-The interface calls authenticated REST APIs. Java validates requests and performs business operations. MongoDB stores records; MinIO stores PDF bytes. A saved application, stage or ranking survives refresh and process restart.
+The interface calls authenticated REST APIs. Java validates requests and performs business operations. MongoDB stores records; MinIO stores PDF bytes. Saved applications, stages and human reviews survive restarts; the automatic order is recalculated from saved applications.
 
 ### "Why Spring Boot and Python together?"
 
@@ -550,7 +553,7 @@ The project stores document-shaped records with explicit references. The local r
 
 ### "Is this AI candidate ranking?"
 
-No. CV processing extracts text, and a human applies a job-specific rubric. Java calculates weighted scores from those ratings. The project currently has no trained predictive hiring model or automatic CV-to-score pipeline.
+No predictive AI model is used. Java automatically orders applications by explained requirement-word matches; private CVs are excluded. Recruiters may add a separate human rubric assessment.
 
 ### "How do you handle missing evidence and ties?"
 
@@ -577,14 +580,14 @@ The organization owner creates a one-use, email-bound invitation. A new recruite
 
 ### What you can claim
 
-The connected local recruitment journey is implemented: role-based access, organization evidence review, owner-controlled recruiter invitations, drafts and publishing, exact job links, candidate CV/profile workflows, applications, evidence review, explainable human-rated ranking, recorded stages, interviews, notifications, support, reports and selected privacy/backup controls.
+The connected local recruitment journey is implemented: role-based access, organization evidence review, owner-controlled recruiter invitations, drafts and publishing, exact job links, candidate CV/profile workflows, applications, evidence review, explainable automatic text-match ranking and optional human-rated ranking, recorded stages, interviews, notifications, support, reports and selected privacy/backup controls.
 
 ### What you should not claim
 
 - That every part of the original project is finished or that a precise completion percentage has been independently certified.
 - That email has been delivered without a configured provider and an actual inbox check, or that payments work without merchant integration.
 - That an uploaded business PDF is government-verified, that OCR is always correct, or that a source quote proves a qualification is true.
-- That ranking is automatic AI selection, a prediction of performance, or a proof of fairness.
+- That automatic text matching is an AI selection, a prediction of performance, proof of competence, or proof of fairness.
 
 ### Remaining engineering work
 
@@ -603,4 +606,4 @@ Remaining work includes real SMTP delivery, recruitment email/SMS, payments, ema
 
 ### Source index for further reading
 
-Sources: the code named on pages 13-19, `backend/pom.xml`, `frontend/package.json`, September 12 test logs and `FULLSTACK_PROGRESS.md`. Companion guides cover ranking, requirement review, team access, account security, privacy and backup/recovery. Older guides contain historical status and test counts; use the behavior described here for presentation.
+Sources: the code named on pages 13-19, `backend/pom.xml`, `frontend/package.json`, September 14 test reports and `FULLSTACK_PROGRESS.md`. Companion guides cover ranking, requirement review, team access, account security, privacy and backup/recovery. Older guides contain historical status and test counts; use the behavior described here for presentation.

@@ -1,6 +1,18 @@
 # Candidate ranking: operation and code guide
 
-Open Employer > Candidate ranking. This is a comparison of human-reviewed evidence for one job and one hiring stage. CV extraction does not assign ratings. No score changes a hiring stage, rejects an applicant or sends an offer.
+Open Employer > Candidate ranking. FairMatch now produces an automatic first-pass **text-evidence ranking** for every application in the selected job and stage. The separate, optional recruiter assessment uses 0–4 ratings. Neither ranking changes a hiring stage, rejects an applicant or sends an offer.
+
+## Automatic first-pass ranking (no manual candidate scoring)
+
+1. Create a job with specific, job-related requirements. Candidates submit experience, education, skills and a work example. Candidate clarification replies are included when present.
+2. Open Employer > Candidate ranking and choose the job and hiring stage. The automatic list is already calculated. No rubric configuration or recruiter rating is required.
+3. Open **Why this position?** to see, for every requirement, the distinct matched words, the exact submitted passage, its source, its weight and its contribution. This is a reproducible text-match explanation, not an AI judgment of skill.
+4. When a current rubric exists, its weights are used. Otherwise, requirements receive approximately equal weights totaling 100%. For each requirement, Java counts the distinct substantive requirement words present together in the best single application passage. Match points = requirement weight × matched-word count ÷ requirement-word count. The total is the sum of match points. Repeated words do not add points. Equal totals share a rank.
+5. A candidate reply or edited job criteria changes the result on refresh. The calculation runs against current submitted text; there is no recruiter-maintained score to update.
+
+**Interpretation:** A 0 match means the submitted text did not contain the selected words. It does not mean the candidate lacks the skill. Synonyms, Bangla wording, implicit evidence and unusually formatted text may be missed. Copying job words can inflate a match. A passage containing words is not proof the claim is true. Review the cited evidence and compare applicants consistently before any decision. Do not use the automatic order to reject candidates automatically.
+
+Private uploaded CV PDFs and their raw extracted text stay in the candidate's Documents area and are **not** read by employer ranking. The candidate can review extracted suggestions, put relevant details into their application and consent to share that application with the employer. This respects the current private-document boundary.
 
 ## 1. Set up a job and rubric
 
@@ -11,11 +23,11 @@ Open Employer > Candidate ranking. This is a comparison of human-reviewed eviden
 5. Edit the five rating descriptions for each criterion. Define concrete evidence for 0, 1, 2, 3 and 4. Starter text is only a template; adapt it to the actual work.
 6. If a criterion is essential, mark it and explain why it is necessary for the job. A rating below 3 or missing assessment is visibly flagged for clarification; this does not automatically reject the applicant.
 7. Explain your rubric or change in at least 20 characters, confirm that it is job-related and consistently applied, and save.
-8. Return to Jobs > Draft > Edit to publish when ready. Rubric setup works before applications arrive. Publishing existing jobs is not blocked merely because a rubric has not been configured, but those jobs cannot produce a ranking until a current rubric exists.
+8. Return to Jobs > Draft > Edit to publish when ready. Rubric setup works before applications arrive and customizes automatic ranking weights. Without a rubric, automatic ranking still uses equal weights; only human-assessment scoring waits for a rubric.
 
 Avoid weights or scoring criteria based on names, photos, age, gender, religion, disability, home district, university prestige, CV decoration or repeated keywords. Relevant projects can demonstrate competencies for freshers. Human confirmation of a rubric does not prove that it is fair or predictive; review its suitability and reviewer agreement before relying on it.
 
-## 2. Assess candidates
+## 2. Optional deeper recruiter assessment
 
 1. Select a job and hiring stage. New, Shortlisted and Interview are separate comparisons. Scores are never mixed across jobs or stages.
 2. Open Assess candidate in the Assessment queue.
@@ -25,9 +37,9 @@ Avoid weights or scoring criteria based on names, photos, age, gender, religion,
 6. Confirm your assessment and save. You may save an incomplete assessment. It remains in the queue without a numerical total or rank.
 7. For missing information, open Applications > Supporting information and request clarification. A candidate can reply from their application. New replies invalidate that application's old score and become selectable sources for reassessment.
 
-The current ranking uses submitted and clarified application evidence. It does not automatically import interview scores, run coding tests or create AI judgments. If candidates progress to another stage, conduct a consistent assessment there; the system asks for a current-stage review instead of silently reusing the old score.
+The manual rubric assessment is a distinct, more detailed result. It does not automatically import interview scores, run coding tests or create AI judgments. If candidates progress to another stage, conduct a consistent assessment there; the system asks for a current-stage review instead of silently reusing the old score.
 
-## 3. Read the result
+## 3. Read the human-reviewed result
 
 Java calculates score = sum(rating / 4 * weight). With weights 40, 30, 20 and 10 and ratings 4, 3, 3 and 2, the result is 82.50 / 100. This is a rubric score, not a probability of future performance.
 
@@ -49,7 +61,8 @@ If a save reports a conflict, use Reload and discard edits, inspect the latest r
 
 ## 5. Backend structure
 
-- application/RankingController.java: rubric endpoints, validation, ownership, snapshots, weighted scoring, board construction, history and transaction handling.
+- application/AutomaticEvidenceMatcher.java: deterministic first-pass text matching, source snippets and match-point calculation. It reads only employer-shared application fields and candidate replies.
+- application/RankingController.java: automatic board projection, rubric endpoints, validation, ownership, snapshots, optional human scoring, history and transaction handling.
 - job/JobService.java: publishes a criteria-change event for relevant job edits; the ranking listener invalidates the rubric and records history.
 - application/ApplicationService.java: explicit hiring-stage actions remain separate. Candidate replies are serialized with concurrent ranking saves.
 - common/ApiErrors.java: concurrent database conflicts return a recoverable response; uncertain database outcomes ask the user to refresh before retrying.
@@ -70,18 +83,18 @@ Endpoints require the employer role and ownership of both job and application. R
 
 ## 6. Frontend structure
 
-frontend/src/components/fairmatch/candidate-ranking.tsx contains CandidateRanking (job/stage selection and board), RubricEditor (weights/anchors), RankingReview (quotes/ratings) and RankingRows (explanations). recruiter-workspace.tsx adds navigation and job-row shortcuts. platform.css provides responsive panels and scrolling dialogs with persistent action buttons.
+frontend/src/components/fairmatch/candidate-ranking.tsx contains CandidateRanking (automatic results, source explanations, job/stage selection and board), RubricEditor (weights/anchors), RankingReview (optional quotes/ratings) and RankingRows (human assessment explanations). recruiter-workspace.tsx adds navigation and job-row shortcuts. platform.css provides responsive panels and scrolling dialogs with persistent action buttons.
 
 The existing Supported / Partial / Needs evidence review is retained as a separate evidence-band summary. It is not silently converted into numerical ratings. Recruiters must explicitly assess the new rubric.
 
 ## 7. Explain it to your teacher
 
-“FairMatch ranks completed human assessments against a job-specific weighted rubric. Every positive rating cites submitted evidence, and the backend calculates the total. Missing evidence stays unranked, equal scores share a rank, and changes invalidate stale comparisons. The recruiter can inspect every contribution to the score and makes the hiring decision separately.”
+“FairMatch automatically orders candidates by transparent text matches between the published job requirements and each submitted application. It shows the matched passage and point calculation, and recalculates when new evidence arrives. This helps a recruiter decide whom to read first, but does not prove competence. Recruiters can add a separate, deeper weighted assessment; they still make and record the hiring decision themselves.”
 
 Tests are in backend/src/test/java/com/fairmatch/RankingTest.java. They cover the worked calculation, ties, null versus zero, essential flags, unchanged stages, invalid inputs, access control, rubric invalidation, stage changes, clarification evidence and simultaneous saves. Test fixtures use separate databases rather than assigning ratings to real applications.
 
 ## 8. Verified operation
 
-On September 10, the full 46-test backend suite passed. The seven ranking tests passed again after final input-validation fixes. Frontend lint, TypeScript and the production build passed.
+On September 14, the full 55-test backend suite passed with zero failures or errors. The automatic-ranking test verifies that applications are ordered without recruiter ratings, private candidate CV text is excluded, and a new candidate reply updates the comparison. Frontend lint, TypeScript and the production build passed. The Desktop launcher was rebuilt and restarted; backend and frontend health checks returned HTTP 200.
 
 Browser verification created a rubric and two assessments in an isolated database: one completed 75/100 result and one incomplete assessment with no rank. Their quotes, reasons, rubric and histories survived browser reload and a packaged Spring Boot restart. Desktop and 390px mobile dialogs kept their action buttons visible and content internally scrollable. See logs/ranking-ui-result.json. No ratings were assigned to your real applicants during these checks.

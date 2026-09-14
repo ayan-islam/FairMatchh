@@ -42,6 +42,25 @@ class RankingTest {
  void rubric(String token,String job)throws Exception{var b=call(get(base(job)),token,null,200);call(put(base(job)+"/rubric"),token,rubricInput(b),200);}
  Map<String,Object> input(JsonNode report,Integer...ratings){var items=new ArrayList<Map<String,Object>>();for(int n=0;n<ratings.length;n++){var i=new HashMap<String,Object>();i.put("index",n);i.put("rating",ratings[n]);i.put("source",ratings[n]!=null&&ratings[n]>0?"experience":"none");i.put("quote",ratings[n]!=null&&ratings[n]>0?"Built Java APIs":"");i.put("reason",ratings[n]==null?"Clarification is still required.":"This evidence was assessed against the defined competency level.");items.add(i);}return new HashMap<>(Map.of("snapshot",report.get("snapshot").asText(),"expectedVersion",report.get("version").asLong(),"items",items,"confirmed",true));}
  JsonNode assess(String token,String job,String app,Integer...ratings)throws Exception{var path=base(job)+"/applications/"+app;var r=call(get(path),token,null,200);return call(post(path),token,input(r,ratings),200);}
+ @Test void automaticRankingUsesSubmittedEvidenceWithoutManualRatingsOrPrivateCvs()throws Exception{
+  var employer=employer();var j=create(employer);var firstCandidate=register("CANDIDATE");var secondCandidate=register("CANDIDATE");
+  var first=apply(j,firstCandidate);
+  var weak=new HashMap<String,Object>();weak.put("name","ignored");weak.put("contact","ignored@example.test");weak.put("role","Coordinator");weak.put("experience","Organized events and coordinated appointment schedules for a local team.");weak.put("education","Bachelor degree");weak.put("skills",List.of("Planning"));weak.put("example","Prepared meeting agendas and tracked follow-up tasks for colleagues.");weak.put("availability","Soon");weak.put("location","Dhaka");weak.put("consent",true);weak.put("evidenceConfirmed",true);weak.put("finalConsent",true);
+  var second=call(post("/api/candidate/jobs/"+j+"/applications"),secondCandidate,weak,201).get("id").asText();
+  var owner=mongo.getCollection("applications").find(new Document("_id",second)).first().getString("ownerId");
+  mongo.getCollection("candidate_documents").insertOne(new Document("_id",UUID.randomUUID().toString()).append("ownerId",owner).append("status","Confirmed").append("text","Java backend development and problem solving"));
+  var board=call(get(base(j)),employer,null,200);
+  assertThat(board.get("ranked").size()).isZero();assertThat(board.get("autoRanked").size()).isEqualTo(2);
+  assertThat(board.at("/autoRanked/0/applicationId").asText()).isEqualTo(first);
+  assertThat(board.at("/autoRanked/1/applicationId").asText()).isEqualTo(second);
+  assertThat(board.at("/autoRanked/0/score").asDouble()).isGreaterThan(board.at("/autoRanked/1/score").asDouble());
+  assertThat(board.toString()).doesNotContain("Private rank applicant","ignored@example.test","candidate_documents");
+  call(post("/api/candidate/applications/"+second+"/messages"),secondCandidate,Map.of("message","I developed a Java backend software project and explained technical decisions."),200);
+  var refreshed=call(get(base(j)),employer,null,200);
+  double secondScore=0;for(var row:refreshed.get("autoRanked"))if(row.get("applicationId").asText().equals(second))secondScore=row.get("score").asDouble();
+  assertThat(secondScore).isGreaterThan(board.at("/autoRanked/1/score").asDouble());
+  assertThat(refreshed.get("ranked").size()).isZero();
+ }
  @Test void weightedScoresTiesUnknownZeroAndEssentialGapsAreExplainedWithoutStageChanges()throws Exception{
   var t=employer();var j=create(t);rubric(t,j);
   var a=apply(j,register("CANDIDATE"));var b=apply(j,register("CANDIDATE"));var c=apply(j,register("CANDIDATE"));var d=apply(j,register("CANDIDATE"));var e=apply(j,register("CANDIDATE"));

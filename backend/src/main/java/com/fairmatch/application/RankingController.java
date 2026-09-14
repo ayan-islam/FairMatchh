@@ -19,7 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-/** Deterministic comparison of human ratings; never writes a hiring stage or inferred qualification. */
+/** Deterministic evidence matching and human-reviewed scoring; neither writes a hiring stage. */
 @RestController
 @RequestMapping("/api/employer/jobs/{jobId}/ranking")
 class RankingController {
@@ -47,7 +47,8 @@ class RankingController {
     @Document("ranking_review_history") record ReviewHistory(@Id String id,Review review) {}
     record ReviewReport(String applicationId,String stage,String snapshot,Rubric rubric,List<Source> sources,Review latestReview,boolean current,long version,List<Review> history) {}
     record Row(String applicationId,String stage,Integer rank,Double score,int assessed,int total,String status,List<String> essentialGaps,Review review) {}
-    record Board(String jobId,String jobTitle,String stage,String snapshot,List<String> requirements,Rubric rubric,boolean rubricCurrent,List<Row> ranked,List<Row> pending,List<Rubric> rubricHistory) {}
+    record AutoRow(String applicationId,int rank,double score,int matched,int total,List<AutomaticEvidenceMatcher.Match> matches) {}
+    record Board(String jobId,String jobTitle,String stage,String snapshot,List<String> requirements,Rubric rubric,boolean rubricCurrent,List<AutoRow> autoRanked,List<Row> ranked,List<Row> pending,List<Rubric> rubricHistory) {}
     private String digest(Object value) {
         try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(json.writeValueAsBytes(value)));}
         catch(Exception e){throw new IllegalStateException("Cannot identify ranking revision",e);}
@@ -88,8 +89,15 @@ class RankingController {
         var org=platform.organizationId(p.getName());var j=job(org,jobId);var snapshot=jobSnapshot(j);var rubric=mongo.findById(jobId,Rubric.class);
         boolean current=rubric!=null&&rubric.organizationId().equals(org)&&rubric.snapshot().equals(snapshot);
         var all=mongo.find(Query.query(Criteria.where("organizationId").is(org).and("jobId").is(jobId).and("stage").is(stage)),ApplicationDocument.class);
-        var ranked=new ArrayList<Row>();var pending=new ArrayList<Row>();
+        var autoRanked=new ArrayList<AutoRow>();var ranked=new ArrayList<Row>();var pending=new ArrayList<Row>();
+        var weights=new ArrayList<Integer>();
+        if(!j.requirements().isEmpty())for(int n=0;n<j.requirements().size();n++)weights.add(current?rubric.criteria().get(n).weight():100/j.requirements().size()+(n<100%j.requirements().size()?1:0));
         for(var a:all) {
+            if(!j.requirements().isEmpty()&&!Set.of("Withdrawn","Not selected").contains(stage)) {
+                var evidence=sources(a).stream().map(s->new AutomaticEvidenceMatcher.Evidence(s.field(),s.text())).toList();
+                var match=AutomaticEvidenceMatcher.compare(j.requirements(),weights,evidence);
+                autoRanked.add(new AutoRow(a.id(),0,match.score(),match.matched(),j.requirements().size(),match.matches()));
+            }
             var r=mongo.findById(a.id()+":"+stage,Review.class);
             boolean valid=current&&r!=null&&r.snapshot().equals(reviewSnapshot(a,rubric));
             String status=!current?"Rubric needs setup":r==null?"Not assessed":!valid?"Reassessment required":r.scoreUnits()==null?"Assessment incomplete":"Complete";
@@ -99,12 +107,15 @@ class RankingController {
             var row=new Row(a.id(),stage,null,valid&&r.scoreUnits()!=null?r.scoreUnits()/4.0:null,valid?r.assessed():0,j.requirements().size(),status,gaps,valid?r:null);
             if(status.equals("Complete"))ranked.add(row);else pending.add(row);
         }
+        autoRanked.sort(Comparator.comparing(AutoRow::score).reversed().thenComparing(AutoRow::applicationId));
+        int autoRank=0;Double previousAuto=null;
+        for(int n=0;n<autoRanked.size();n++){var r=autoRanked.get(n);if(!Objects.equals(previousAuto,r.score()))autoRank=n+1;previousAuto=r.score();autoRanked.set(n,new AutoRow(r.applicationId(),autoRank,r.score(),r.matched(),r.total(),r.matches()));}
         ranked.sort(Comparator.comparing(Row::score).reversed().thenComparing(Row::applicationId));
         int rank=0;Double previous=null;
         for(int n=0;n<ranked.size();n++){var r=ranked.get(n);if(!Objects.equals(previous,r.score()))rank=n+1;previous=r.score();ranked.set(n,new Row(r.applicationId(),stage,rank,r.score(),r.assessed(),r.total(),r.status(),r.essentialGaps(),r.review()));}
         pending.sort(Comparator.comparing(Row::applicationId));
         var history=mongo.find(Query.query(Criteria.where("rubric.id").is(jobId).and("rubric.organizationId").is(org)).with(Sort.by(Sort.Direction.DESC,"rubric.version")),RubricHistory.class).stream().map(RubricHistory::rubric).toList();
-        return new Board(jobId,j.title(),stage,snapshot,j.requirements(),rubric,current,ranked,pending,history);
+        return new Board(jobId,j.title(),stage,snapshot,j.requirements(),rubric,current,autoRanked,ranked,pending,history);
     }
     @PutMapping("/rubric") @Transactional
     Rubric saveRubric(@PathVariable String jobId,@Valid @RequestBody RubricInput input,Principal p) {

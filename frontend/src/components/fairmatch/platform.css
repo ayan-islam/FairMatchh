@@ -234,6 +234,7 @@
 .fs-ranking-panel > .fm-panel-heading { padding:0 0 18px; }
 .fs-ranking-panel p { line-height:1.7; margin:10px 0; color:#425b73; }
 .fs-ranking-summary { display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin:20px 0; }
+.fs-ranking-section-title { font-size:20px; font-weight:650; margin:28px 0 6px; }
 .fs-ranking-row { border-top:1px solid #dce7e7; padding:20px 0; overflow-wrap:anywhere; }
 .fs-ranking-row-heading { display:flex; justify-content:space-between; gap:20px; align-items:flex-start; }
 .fs-ranking-row h3,.fs-ranking-details h3 { font-weight:600; }
