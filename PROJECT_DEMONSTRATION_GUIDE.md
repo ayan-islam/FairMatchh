@@ -252,9 +252,10 @@ The evidence-band summary is Strong evidence when every requirement is Supported
 
 ### Show the automatic result first
 
-1. Open **Employer > Candidate ranking** and choose a job and stage. Every application appears in **Automatic evidence ranking** without recruiter ratings.
-2. Open **Why this position?** to show matched words, the submitted passage and points. Refresh after a new application or candidate reply to see the order change.
-3. Explain that this measures text overlap, not ability. A rubric supplies weights; otherwise weights are equal. Private CVs are excluded. Recruiters inspect the evidence before decisions.
+1. Open **Employer > Candidate ranking** and choose a job and stage. Every application appears under **Ranked candidates** without recruiter ratings.
+2. Click a candidate ID to open the action centre. Show that evidence, requirement review, supporting information, interview scheduling, optional rubric assessment and hiring-stage movement are available without leaving the ranking workflow.
+3. Open **Why this position?** to show matched words, the submitted passage and points. Refresh after a new application or candidate reply to see the order change.
+4. Explain that this measures text overlap, not ability. A rubric supplies weights; otherwise weights are equal. Private CVs are excluded. Recruiters inspect the evidence before decisions.
 
 ### Configure optional deeper assessment
 

@@ -148,6 +148,7 @@ export function RecruiterWorkspace({
   const [decision, setDecision] = useState<Candidate | null>(null);
   const [request, setRequest] = useState<Candidate | null>(null);
   const [schedule, setSchedule] = useState<Interview | true | null>(null);
+  const [scheduleCandidateId, setScheduleCandidateId] = useState<string>();
   const [cancellingInterview, setCancellingInterview] = useState<Interview | null>(null);
   const [rubric, setRubric] = useState<Interview | null>(null);
   const [shareJob, setShareJob] = useState<Job | null>(null);
@@ -705,7 +706,13 @@ export function RecruiterWorkspace({
               </Panel>
             </>
           )}
-          {view === "ranking" && <CandidateRanking key={rankingJobId || "all"} jobs={jobs} auth={auth} initialJobId={rankingJobId} />}
+          {view === "ranking" && <CandidateRanking key={rankingJobId || "all"} jobs={jobs} candidates={candidates} auth={auth} initialJobId={rankingJobId} onCandidateAction={(action,candidate)=>{
+            if(action==="evidence")setEvidence(candidate);
+            if(action==="review")setReviewing(candidate);
+            if(action==="request")setRequest(candidate);
+            if(action==="stage")setDecision(candidate);
+            if(action==="schedule"){setScheduleCandidateId(candidate.id);setSchedule(true);}
+          }} />}
           {view === "applications" && (
             <>
               <PageHeading
@@ -1360,10 +1367,12 @@ export function RecruiterWorkspace({
           candidates={candidates.filter((c) => !["Not selected", "Hired", "Withdrawn"].includes(c.stage) || (schedule !== true && c.id === schedule.candidateId))}
           jobs={jobs}
           interview={schedule === true ? undefined : schedule}
-          onClose={() => setSchedule(null)}
+          initialCandidateId={schedule === true ? scheduleCandidateId : undefined}
+          onClose={() => {setSchedule(null);setScheduleCandidateId(undefined);}}
           onSave={async (input) => {
             await onScheduleInterview(input, schedule === true ? undefined : schedule);
             setSchedule(null);
+            setScheduleCandidateId(undefined);
             toast.success("Interview saved to the database. Share the meeting details with the candidate.");
             navigate("interviews");
           }}

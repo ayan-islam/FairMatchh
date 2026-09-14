@@ -13,11 +13,11 @@ import { useCurrentTime } from "./use-current-time";
 type CloseProps = { onClose: () => void };
 const dhakaDate = (date: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
 
-export function ScheduleDialog({ candidates, jobs, interview, onClose, onSave }: CloseProps & {
-  candidates: Candidate[]; jobs: Job[]; interview?: Interview;
+export function ScheduleDialog({ candidates, jobs, interview, initialCandidateId, onClose, onSave }: CloseProps & {
+  candidates: Candidate[]; jobs: Job[]; interview?: Interview; initialCandidateId?: string;
   onSave: (input: InterviewInput) => Promise<void>;
 }) {
-  const [candidateId, setCandidateId] = useState(interview?.candidateId || "");
+  const [candidateId, setCandidateId] = useState(interview?.candidateId || initialCandidateId || "");
   const [date, setDate] = useState(() => interview?.date || dhakaDate(new Date(Date.now() + 86400000)));
   const [time, setTime] = useState(interview?.time || "11:00");
   const [format, setFormat] = useState(interview?.format || "Video interview");

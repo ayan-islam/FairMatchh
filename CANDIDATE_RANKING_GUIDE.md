@@ -6,9 +6,10 @@ Open Employer > Candidate ranking. FairMatch now produces an automatic first-pas
 
 1. Create a job with specific, job-related requirements. Candidates submit experience, education, skills and a work example. Candidate clarification replies are included when present.
 2. Open Employer > Candidate ranking and choose the job and hiring stage. The automatic list is already calculated. No rubric configuration or recruiter rating is required.
-3. Open **Why this position?** to see, for every requirement, the distinct matched words, the exact submitted passage, its source, its weight and its contribution. This is a reproducible text-match explanation, not an AI judgment of skill.
-4. When a current rubric exists, its weights are used. Otherwise, requirements receive approximately equal weights totaling 100%. For each requirement, Java counts the distinct substantive requirement words present together in the best single application passage. Match points = requirement weight × matched-word count ÷ requirement-word count. The total is the sum of match points. Repeated words do not add points. Equal totals share a rank.
-5. A candidate reply or edited job criteria changes the result on refresh. The calculation runs against current submitted text; there is no recruiter-maintained score to update.
+3. Click a candidate ID to open the action centre. From there you can view all evidence, review requirements, request information, schedule an interview, start an optional rubric assessment or update the hiring stage.
+4. Open **Why this position?** to see, for every requirement, the distinct matched words, the exact submitted passage, its source, its weight and its contribution. This is a reproducible text-match explanation, not an AI judgment of skill.
+5. When a current rubric exists, its weights are used. Otherwise, requirements receive approximately equal weights totaling 100%. For each requirement, Java counts the distinct substantive requirement words present together in the best single application passage. Match points = requirement weight × matched-word count ÷ requirement-word count. The total is the sum of match points. Repeated words do not add points. Equal totals share a rank.
+6. A candidate reply, evidence review or hiring-stage change refreshes the comparison. The calculation runs against current submitted text; there is no recruiter-maintained score to update.
 
 **Interpretation:** A 0 match means the submitted text did not contain the selected words. It does not mean the candidate lacks the skill. Synonyms, Bangla wording, implicit evidence and unusually formatted text may be missed. Copying job words can inflate a match. A passage containing words is not proof the claim is true. Review the cited evidence and compare applicants consistently before any decision. Do not use the automatic order to reject candidates automatically.
 
@@ -47,7 +48,7 @@ Java calculates score = sum(rating / 4 * weight). With weights 40, 30, 20 and 10
 - Equal scores share a competition rank, for example 1, 1, 3. An internal application-reference order stabilizes the display within ties; it does not assign different ranks.
 - Incomplete, unassessed and stale reviews appear separately. Missing values are not converted to zero and the remaining criteria are not reweighted.
 - Essential criteria below the expected level are shown explicitly for recruiter clarification. The overall score does not hide them.
-- Withdrawn and Not selected applications are outside active ranking. Changing an application's stage does not happen through this feature.
+- Not selected applications are outside active ranking. Withdrawn applications are permanently removed. Hiring-stage movement is available from the candidate action centre and remains an explicit, reasoned recruiter decision.
 - Why this result? shows the rating, weight, points, source quote, reason, reviewer, time and versions.
 - Export this comparison downloads a CSV of the selected job and stage, including completeness and essential-requirement flags.
 
@@ -83,7 +84,7 @@ Endpoints require the employer role and ownership of both job and application. R
 
 ## 6. Frontend structure
 
-frontend/src/components/fairmatch/candidate-ranking.tsx contains CandidateRanking (automatic results, source explanations, job/stage selection and board), RubricEditor (weights/anchors), RankingReview (optional quotes/ratings) and RankingRows (human assessment explanations). recruiter-workspace.tsx adds navigation and job-row shortcuts. platform.css provides responsive panels and scrolling dialogs with persistent action buttons.
+frontend/src/components/fairmatch/candidate-ranking.tsx contains CandidateRanking (automatic results, source explanations, compact controls and the candidate action centre), RubricEditor (weights/anchors), RankingReview (optional quotes/ratings) and RankingRows (human assessment explanations). recruiter-workspace.tsx connects the action centre to evidence review, conversations, interviews and stage decisions. platform.css provides the responsive ranking workspace and scrolling dialogs with persistent action buttons.
 
 The existing Supported / Partial / Needs evidence review is retained as a separate evidence-band summary. It is not silently converted into numerical ratings. Recruiters must explicitly assess the new rubric.
 
