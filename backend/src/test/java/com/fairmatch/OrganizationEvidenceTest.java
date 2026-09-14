@@ -91,4 +91,31 @@ class OrganizationEvidenceTest {
         draft.put("status","Active");call(put("/api/employer/jobs/"+id),token,draft,409);
         assertThat(call(get("/api/employer/jobs"),token,null,200).get(0).get("status").asText()).isEqualTo("Draft");
     }
+    @Test void ownerCanCancelAndResubmitWhileAdminCanClearCancelledListWithoutDeletingTheOrganization()throws Exception{
+        var owner=register("EMPLOYER");var token=owner.get("token").asText();var org=owner.at("/user/organizationId").asText();var admin=admin();
+        var cancel="/api/employer/organization/verification/cancel";
+        var resubmit="/api/employer/organization/verification/resubmit";
+        var candidate=register("CANDIDATE").get("token").asText();
+        call(post(cancel),candidate,Map.of("expectedVersion",0),403);
+        call(post(cancel),admin,Map.of("expectedVersion",0),403);
+        call(post(cancel),token,Map.of("expectedVersion",1),409);
+        var cancelled=call(post(cancel),token,Map.of("expectedVersion",0),200);
+        assertThat(cancelled.get("status").asText()).isEqualTo("Cancelled");
+        assertThat(cancelled.get("version").asLong()).isEqualTo(1);
+        call(post("/api/admin/organizations/"+org+"/review"),admin,decision(1,List.of()),409);
+        call(post(cancel),token,Map.of("expectedVersion",1),409);
+        call(post("/api/admin/organizations/cancelled/clear"),token,Map.of(),403);
+        call(post("/api/admin/organizations/cancelled/clear"),admin,Map.of(),200);
+        var archived=call(get("/api/employer/organization"),token,null,200);
+        assertThat(archived.get("status").asText()).isEqualTo("Cancelled");
+        assertThat(archived.get("clearedFromAdmin").asBoolean()).isTrue();
+        assertThat(call(get("/api/admin/organizations"),admin,null,200).toString()).contains(org);
+        call(post(resubmit),token,Map.of("expectedVersion",0),409);
+        var pending=call(post(resubmit),token,Map.of("expectedVersion",1),200);
+        assertThat(pending.get("status").asText()).isEqualTo("Pending");
+        assertThat(pending.get("clearedFromAdmin").asBoolean()).isFalse();
+        assertThat(pending.get("version").asLong()).isEqualTo(2);
+        call(post(resubmit),token,Map.of("expectedVersion",2),409);
+        assertThat(call(get("/api/admin/audit"),admin,null,200).toString()).contains("ORGANIZATION_VERIFICATION_CANCELLED","CANCELLED_ORGANIZATIONS_CLEARED","ORGANIZATION_VERIFICATION_RESUBMITTED");
+    }
 }

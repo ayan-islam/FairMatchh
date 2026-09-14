@@ -4,11 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 import { Button } from "@/components/ui/button";
 
-export function PdfPreview({ data, filename, onReady }: {
+export function PdfPreview({ data, filename, onReady, onFullscreenChange }: {
   data: Uint8Array<ArrayBuffer>;
   filename: string;
   onReady: () => void;
+  onFullscreenChange?: (active: boolean) => void;
 }) {
+  const readerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pagesRef = useRef<HTMLDivElement>(null);
   const readyRef = useRef(onReady);
@@ -17,7 +19,20 @@ export function PdfPreview({ data, filename, onReady }: {
   const [zoom, setZoom] = useState(1);
   const [width, setWidth] = useState(0);
   const [rendering, setRendering] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const update = () => {
+      const active = document.fullscreenElement === readerRef.current;
+      setFullscreen(active);
+      onFullscreenChange?.(active);
+    };
+    document.addEventListener("fullscreenchange", update);
+    return () => {
+      document.removeEventListener("fullscreenchange", update);
+    };
+  }, [onFullscreenChange]);
 
   useEffect(() => {
     readyRef.current = onReady;
@@ -94,7 +109,25 @@ export function PdfPreview({ data, filename, onReady }: {
     };
   }, [pdf, pageNumber, width, zoom]);
 
-  return <div className="fs-document-preview-reader">
+  async function toggleFullscreen() {
+    try {
+      if (document.fullscreenElement === readerRef.current) {
+        await document.exitFullscreen();
+      } else {
+        await readerRef.current?.requestFullscreen();
+      }
+    } catch {
+      setError("Full screen is unavailable in this browser.");
+    }
+  }
+
+  return <div className="fs-document-preview-reader" ref={readerRef} onKeyDownCapture={event => {
+    if (event.key === "Escape" && document.fullscreenElement === readerRef.current) {
+      event.preventDefault();
+      event.stopPropagation();
+      void document.exitFullscreen();
+    }
+  }}>
     {error && <p className="fm-error" role="alert">{error}</p>}
     {pdf && <div className="fs-document-preview-controls">
       <Button type="button" variant="outline" disabled={pageNumber <= 1} onClick={() => setPageNumber(page => page - 1)}>Previous page</Button>
@@ -103,6 +136,7 @@ export function PdfPreview({ data, filename, onReady }: {
       <Button type="button" variant="outline" disabled={zoom <= 0.75} onClick={() => setZoom(value => Math.max(0.75, value - 0.25))}>Zoom out</Button>
       <span>{Math.round(zoom * 100)}%</span>
       <Button type="button" variant="outline" disabled={zoom >= 1.75} onClick={() => setZoom(value => Math.min(1.75, value + 0.25))}>Zoom in</Button>
+      <Button type="button" variant="outline" onClick={() => void toggleFullscreen()}>{fullscreen ? "Exit full screen" : "Full screen"}</Button>
     </div>}
     <div className="fs-document-preview-pages" ref={pagesRef}>
       {!pdf && !error && <p role="status">Loading PDF preview…</p>}

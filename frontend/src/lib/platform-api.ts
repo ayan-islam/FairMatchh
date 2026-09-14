@@ -19,6 +19,7 @@ export type Organization = {
   reviewReason: string;
   submittedAt: string;
   version: number;
+  clearedFromAdmin: boolean | null;
 };
 export type Member = {
   id: string;
@@ -111,6 +112,10 @@ export const platformApi = {
       },
       auth,
     ),
+  cancelVerification: (org: Organization, auth: string) =>
+    request<Organization>("employer/organization/verification/cancel", "POST", { expectedVersion: org.version }, auth),
+  resubmitVerification: (org: Organization, auth: string) =>
+    request<Organization>("employer/organization/verification/resubmit", "POST", { expectedVersion: org.version }, auth),
   members: (auth: string) =>
     request<Member[]>("employer/members", "GET", undefined, auth),
   notices: (auth: string) =>
@@ -164,6 +169,8 @@ export const platformApi = {
     ),
   organizations: (auth: string) =>
     request<Organization[]>("admin/organizations", "GET", undefined, auth),
+  clearCancelledOrganizations: (auth: string) =>
+    request<{ cleared: number }>("admin/organizations/cancelled/clear", "POST", {}, auth),
   reviewOrganization: (
     org: Organization,
     status: string,

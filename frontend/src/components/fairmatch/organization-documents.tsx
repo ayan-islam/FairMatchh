@@ -12,9 +12,10 @@ type Preview = { id: string; filename: string; data: Uint8Array<ArrayBuffer> };
 export type OrganizationEvidence = { organization: Organization; documents: Evidence[]; history: { id: string; status: string; reason: string; actor: string; at: string; organizationVersion: number; documents: Evidence[] }[] };
 const types = ["Trade licence", "Business registration", "Tax document", "Other supporting document"];
 
-export function OrganizationDocuments({ auth, adminOrgId, onLoaded, checkedIds = [], onChecked }: {
+export function OrganizationDocuments({ auth, adminOrgId, onLoaded, checkedIds = [], onChecked, onPdfFullscreenChange }: {
   auth: string; adminOrgId?: string; onLoaded?: (bundle: OrganizationEvidence) => void;
   checkedIds?: string[]; onChecked?: (ids: string[]) => void;
+  onPdfFullscreenChange?: (active: boolean) => void;
 }) {
   const [bundle, setBundle] = useState<OrganizationEvidence>();
   const [revision, setRevision] = useState(0);
@@ -26,6 +27,7 @@ export function OrganizationDocuments({ auth, adminOrgId, onLoaded, checkedIds =
   const [removing, setRemoving] = useState<string>();
   const [opened, setOpened] = useState<string[]>([]);
   const [preview, setPreview] = useState<Preview | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const base = adminOrgId ? `admin/organizations/${encodeURIComponent(adminOrgId)}/evidence` : "employer/organization/evidence";
   useEffect(() => {
@@ -82,9 +84,23 @@ export function OrganizationDocuments({ auth, adminOrgId, onLoaded, checkedIds =
       setRemoving(undefined); if (preview?.id === id) setPreview(null); setRevision(v => v + 1);
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
+  async function changeVerification(action: "cancel" | "resubmit") {
+    if (!bundle || busy) return;
+    setBusy(true); setError("");
+    try {
+      await request(`employer/organization/verification/${action}`, "POST", { expectedVersion: bundle.organization.version }, auth);
+      setConfirmCancel(false);
+      setRevision(value => value + 1);
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  }
   return <Panel className="fs-organization-evidence" title="Business verification documents" description="Private evidence for an administrator's organization review. Uploads are not a government verification.">
     <div className="fs-form">
       <div className="fs-verification-status"><StatusBadge>{bundle?.organization.status || "Loading…"}</StatusBadge>{bundle?.organization.reviewReason && <p>{bundle.organization.reviewReason}</p>}</div>
+      {!adminOrgId && bundle?.organization.status === "Pending" && <div className="fs-verification-actions">
+        {!confirmCancel ? <Button type="button" variant="outline" disabled={busy} onClick={() => setConfirmCancel(true)}>Cancel verification request</Button> :
+          <div className="fm-notice" role="alert"><div><p>Cancel this pending request? Administrators will no longer review it until you resubmit. Your organization and documents stay saved.</p><div className="fs-actions"><Button type="button" variant="outline" disabled={busy} onClick={() => setConfirmCancel(false)}>Keep request</Button><Button type="button" disabled={busy} onClick={() => void changeVerification("cancel")}>Confirm cancellation</Button></div></div></div>}
+      </div>}
+      {!adminOrgId && bundle?.organization.status === "Cancelled" && <div className="fs-verification-actions"><p>Your request is cancelled. Your documents are still saved.</p><Button type="button" disabled={busy} onClick={() => void changeVerification("resubmit")}>Request verification again</Button></div>}
       {adminOrgId && bundle && <dl className="fs-organization-details">
         {[['Organization', bundle.organization.name], ['Industry', bundle.organization.industry], ['Location', bundle.organization.location], ['Website', bundle.organization.website], ['Contact', bundle.organization.contact]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value?.trim() || "Not provided"}</dd></div>)}
       </dl>}
@@ -102,7 +118,7 @@ export function OrganizationDocuments({ auth, adminOrgId, onLoaded, checkedIds =
         </div>
         {preview?.id === item.id && <div className="fs-document-preview">
           <div className="fs-document-preview-heading"><strong>Preview: {preview.filename}</strong><Button type="button" variant="ghost" onClick={() => setPreview(null)}>Close preview</Button></div>
-          <PdfPreview data={preview.data} filename={preview.filename} onReady={() => setOpened(ids => [...new Set([...ids, item.id])])} />
+          <PdfPreview data={preview.data} filename={preview.filename} onReady={() => setOpened(ids => [...new Set([...ids, item.id])])} onFullscreenChange={onPdfFullscreenChange} />
         </div>}
         {adminOrgId && <label className="fm-check-row"><input type="checkbox" disabled={busy || !opened.includes(item.id)} checked={checkedIds.includes(item.id)} onChange={event => onChecked?.(event.target.checked ? [...checkedIds, item.id] : checkedIds.filter(id => id !== item.id))} /><span>I viewed or downloaded and reviewed {item.filename}.</span></label>}
         {removing === item.id && <div role="alert" className="fm-notice"><div><p>Remove this private file and require a new organization review? Historical decisions retain its description and checksum.</p><div className="fs-actions"><Button variant="outline" disabled={busy} onClick={() => setRemoving(undefined)}>Keep document</Button><Button disabled={busy} onClick={() => void remove(item.id)}>Confirm removal</Button></div></div></div>}

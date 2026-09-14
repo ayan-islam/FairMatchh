@@ -42,7 +42,7 @@ public class PlatformService implements UserDetailsService {
         seed("admin","admin@fairmatch.local","Platform Administrator","ADMIN",null,adminPassword);
         if (!mongo.exists(Query.query(Criteria.where("_id").is("apex-textiles")),Organization.class))
             mongo.insert(new Organization("apex-textiles","Apex Textiles Ltd.","Apparel & Textiles","Dhaka, Bangladesh","",
-                "recruiter@fairmatch.local","Verified","Classroom seed organization; not an external business verification.",Instant.now(),0));
+                "recruiter@fairmatch.local","Verified","Classroom seed organization; not an external business verification.",Instant.now(),0,false));
     }
     private void seed(String username,String contact,String name,String role,String organization,String password) {
         if (!mongo.exists(Query.query(Criteria.where("username").is(username)),Account.class))
@@ -98,7 +98,7 @@ public class PlatformService implements UserDetailsService {
         if(r.role().equals("EMPLOYER")) {
             if(r.organizationName()==null||r.organizationName().trim().length()<2)bad("Enter your organization name.");
             org="ORG-"+UUID.randomUUID();
-            mongo.insert(new Organization(org,r.organizationName().trim(),"","","",contact,"Pending","",Instant.now(),0));
+            mongo.insert(new Organization(org,r.organizationName().trim(),"","","",contact,"Pending","",Instant.now(),0,false));
         }
         var account=mongo.insert(new Account(UUID.randomUUID().toString(),username,contact,r.name().trim(),r.role(),org,passwords.encode(r.password()),Instant.now()));
         if(org!=null)mongo.insert(new Ownership(org,account.id()));
@@ -115,18 +115,44 @@ public class PlatformService implements UserDetailsService {
         if(!requireOrganizationOwner(actor).equals(id))throw new ApiException(HttpStatus.FORBIDDEN,"Organization owner required.");
         var old=organization(id);
         if(r.name().trim().length()<2)bad("Enter an organization name.");
+        var nameChanged=!old.name().equals(r.name().trim());
         var saved=new Organization(id,r.name().trim(),r.industry().trim(),r.location().trim(),r.website().trim(),old.contact(),
-            old.name().equals(r.name().trim())?old.status():"Pending",old.reviewReason(),old.submittedAt(),old.version()+1);
+            nameChanged?"Pending":old.status(),nameChanged?"Organization name changed. Administrator review required.":old.reviewReason(),old.submittedAt(),old.version()+1,
+            nameChanged?false:old.clearedFromAdmin());
         var changed=mongo.updateFirst(Query.query(Criteria.where("_id").is(id).and("version").is(r.expectedVersion())),
-            new Update().set("name",saved.name()).set("industry",saved.industry()).set("location",saved.location()).set("website",saved.website()).set("status",saved.status()).inc("version",1),Organization.class);
+            new Update().set("name",saved.name()).set("industry",saved.industry()).set("location",saved.location()).set("website",saved.website())
+                .set("status",saved.status()).set("reviewReason",saved.reviewReason()).set("clearedFromAdmin",saved.clearedFromAdmin()).inc("version",1),Organization.class);
         if(changed.getModifiedCount()!=1)conflict();
         audit.record(id,"ORGANIZATION_UPDATED",id,null,actor);return saved;
     }
     public List<Organization> organizations() { return mongo.find(new Query().with(Sort.by(Sort.Direction.DESC,"submittedAt")),Organization.class); }
+    @Transactional public Organization cancelVerification(String id,long expectedVersion,String actor) {
+        if(!requireOrganizationOwner(actor).equals(id))throw new ApiException(HttpStatus.FORBIDDEN,"Organization owner required.");
+        var changed=mongo.updateFirst(Query.query(Criteria.where("_id").is(id).and("version").is(expectedVersion).and("status").is("Pending")),
+            new Update().set("status","Cancelled").set("reviewReason","Verification request cancelled by the organization owner.").set("clearedFromAdmin",false).inc("version",1),Organization.class);
+        if(changed.getModifiedCount()!=1)throw new ApiException(HttpStatus.CONFLICT,"Only a current pending verification request can be cancelled. Refresh and try again.");
+        audit.record(id,"ORGANIZATION_VERIFICATION_CANCELLED",id,"Owner cancelled the pending request",actor);
+        return organization(id);
+    }
+    @Transactional public Organization resubmitVerification(String id,long expectedVersion,String actor) {
+        if(!requireOrganizationOwner(actor).equals(id))throw new ApiException(HttpStatus.FORBIDDEN,"Organization owner required.");
+        var changed=mongo.updateFirst(Query.query(Criteria.where("_id").is(id).and("version").is(expectedVersion).and("status").is("Cancelled")),
+            new Update().set("status","Pending").set("reviewReason","Resubmitted for administrator review.").set("clearedFromAdmin",false).set("submittedAt",Instant.now()).inc("version",1),Organization.class);
+        if(changed.getModifiedCount()!=1)throw new ApiException(HttpStatus.CONFLICT,"Only a current cancelled verification request can be resubmitted. Refresh and try again.");
+        audit.record(id,"ORGANIZATION_VERIFICATION_RESUBMITTED",id,"Owner resubmitted the request",actor);
+        return organization(id);
+    }
+    @Transactional public long clearCancelledOrganizations(String actor) {
+        var changed=mongo.updateMulti(Query.query(Criteria.where("status").is("Cancelled").and("clearedFromAdmin").ne(true)),
+            new Update().set("clearedFromAdmin",true),Organization.class);
+        audit.record("platform","CANCELLED_ORGANIZATIONS_CLEARED","all","Archived "+changed.getModifiedCount()+" cancelled verification requests from the admin list",actor);
+        return changed.getModifiedCount();
+    }
     @Transactional public Organization verify(String id,OrganizationDecision r,String actor) {
         if(!Set.of("Verified","Changes requested").contains(r.status()))bad("Choose a verification decision.");
         if(!r.reviewed()||r.reason().trim().length()<20)bad("Review the organization and record at least 20 characters of reasoning.");
         var old=organization(id);
+        if(old.status().equals("Cancelled"))throw new ApiException(HttpStatus.CONFLICT,"This verification request was cancelled. The organization owner must resubmit it.");
         var changed=mongo.updateFirst(Query.query(Criteria.where("_id").is(id).and("version").is(r.expectedVersion())),
             new Update().set("status",r.status()).set("reviewReason",r.reason().trim()).inc("version",1),Organization.class);
         if(changed.getModifiedCount()!=1)conflict();
@@ -200,7 +226,8 @@ public class PlatformService implements UserDetailsService {
     }
     public record UserView(String id,String username,String contact,String name,String role,String organizationId){}
     public record Registration(@NotBlank @Pattern(regexp="[a-zA-Z0-9_.-]{3,60}") String username,@NotBlank @Email @Size(max=160) String contact,@NotBlank @Size(max=160) String name,@NotBlank @Size(min=10,max=72) String password,@Pattern(regexp="CANDIDATE|EMPLOYER") @NotNull String role,@Size(max=160) String organizationName){}
-    @Document("organizations") public record Organization(@Id String id,String name,String industry,String location,String website,String contact,String status,String reviewReason,Instant submittedAt,long version){}
+    @Document("organizations") public record Organization(@Id String id,String name,String industry,String location,String website,String contact,String status,String reviewReason,Instant submittedAt,long version,Boolean clearedFromAdmin){}
+    public record OrganizationVersion(@Min(0) long expectedVersion){}
     public record OrganizationInput(@NotBlank @Size(max=160) String name,@NotNull @Size(max=160) String industry,@NotNull @Size(max=160) String location,@NotNull @Size(max=240) String website,@Min(0) long expectedVersion){}
     public record Decision(@NotBlank String status,@NotBlank @Size(max=2000) String reason,boolean reviewed,@Min(0) long expectedVersion){}
     public record OrganizationDecision(@NotBlank String status,@NotBlank @Size(max=2000) String reason,boolean reviewed,@Min(0) long expectedVersion,@Size(max=5) List<String> reviewedDocumentIds){}

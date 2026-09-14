@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,7 @@ import {
 import { exportCsv } from "@/lib/demo-data";
 import { toast } from "sonner";
 import { OrganizationDocuments, type OrganizationEvidence } from "./organization-documents";
-const organizationStatuses = ["Pending", "Verified", "Changes requested"] as const;
+const organizationStatuses = ["Pending", "Verified", "Changes requested", "Cancelled"] as const;
 type OrganizationStatus = (typeof organizationStatuses)[number];
 
 export function PlatformAdmin({ auth }: { auth: string }) {
@@ -38,10 +38,18 @@ export function PlatformAdmin({ auth }: { auth: string }) {
   const [reason, setReason] = useState("");
   const [reviewed, setReviewed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [confirmClearCancelled, setConfirmClearCancelled] = useState(false);
   const [error, setError] = useState("");
+  const pdfFullscreen = useRef(false);
+  const pdfFullscreenExitAt = useRef(0);
+  const handlePdfFullscreenChange = useCallback((active: boolean) => {
+    if (pdfFullscreen.current && !active) pdfFullscreenExitAt.current = performance.now();
+    pdfFullscreen.current = active;
+  }, []);
+  const keepReviewOpenAfterFullscreen = () => pdfFullscreen.current || (pdfFullscreenExitAt.current > 0 && performance.now() - pdfFullscreenExitAt.current < 750);
   const visibleOrganizations = orgs.filter(
     (organization) =>
-      organization.status === organizationStatus &&
+      organization.status === organizationStatus && !organization.clearedFromAdmin &&
       (organization.name + organization.id + organization.status)
         .toLowerCase()
         .includes(query.trim().toLowerCase()),
@@ -93,6 +101,16 @@ export function PlatformAdmin({ auth }: { auth: string }) {
     } finally {
       setBusy(false);
     }
+  }
+  async function clearCancelled() {
+    if (busy) return;
+    setBusy(true); setError("");
+    try {
+      const result = await platformApi.clearCancelledOrganizations(auth);
+      setConfirmClearCancelled(false);
+      setRevision(value => value + 1);
+      toast.success(`${result.cleared} cancelled request${result.cleared === 1 ? "" : "s"} cleared from this list. Audit history remains.`);
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
   return (
     <main className="fs-workspace" id="main-content">
@@ -152,11 +170,16 @@ export function PlatformAdmin({ auth }: { auth: string }) {
               onClick={() => setOrganizationStatus(status)}
             >
               {status === "Pending" ? "Pending review" : status}
-              <span className="fs-admin-status-count">{orgs.filter((organization) => organization.status === status).length}</span>
+              <span className="fs-admin-status-count">{orgs.filter((organization) => organization.status === status && !organization.clearedFromAdmin).length}</span>
             </Button>
           ))}
         </div>
       )}
+      {tab === "Organizations" && organizationStatus === "Cancelled" && <div className="fs-cancelled-actions">
+        <p>Cancelled requests are retained for audit. Clear all hides them from this list; it does not delete accounts or documents.</p>
+        {confirmClearCancelled ? <div className="fs-actions"><Button type="button" variant="outline" disabled={busy} onClick={() => setConfirmClearCancelled(false)}>Keep requests</Button><Button type="button" disabled={busy} onClick={() => void clearCancelled()}>Confirm clear all</Button></div> :
+          <Button type="button" variant="outline" disabled={busy || !orgs.some(organization => organization.status === "Cancelled" && !organization.clearedFromAdmin)} onClick={() => setConfirmClearCancelled(true)}>Clear all</Button>}
+      </div>}
       <Field label={tab === "Organizations" ? "Search organizations" : "Search records"}>
         <Input value={query} onChange={(e) => setQuery(e.target.value)} />
       </Field>
@@ -181,7 +204,7 @@ export function PlatformAdmin({ auth }: { auth: string }) {
                     setError("");
                   }}
                 >
-                  Review organization
+                  {o.status === "Cancelled" ? "View cancelled request" : "Review organization"}
                 </Button>
               </Panel>
             ))}
@@ -270,13 +293,17 @@ export function PlatformAdmin({ auth }: { auth: string }) {
       <Dialog
         open={!!org || !!item}
         onOpenChange={(v) => {
-          if (!v && !busy) {
+          if (!v && !busy && !keepReviewOpenAfterFullscreen()) {
             setOrg(null);
             setItem(null);
           }
         }}
       >
-        <DialogContent className={`fm-dialog fs-review-dialog${org ? " fm-dialog-wide" : ""}`}>
+        <DialogContent
+          className={`fm-dialog fs-review-dialog${org ? " fm-dialog-wide" : ""}`}
+          onEscapeKeyDown={event => { if (keepReviewOpenAfterFullscreen()) event.preventDefault(); }}
+          onInteractOutside={event => { if (keepReviewOpenAfterFullscreen()) event.preventDefault(); }}
+        >
           <DialogHeader>
             <DialogTitle>
               {org ? "Review organization" : "Respond to support case"}
@@ -286,7 +313,7 @@ export function PlatformAdmin({ auth }: { auth: string }) {
           <div className="fm-dialog-body fs-form">
             {org && (
               <>
-                <OrganizationDocuments key={org.id} auth={auth} adminOrgId={org.id} onLoaded={setReviewEvidence} checkedIds={reviewedDocumentIds} onChecked={setReviewedDocumentIds} />
+                <OrganizationDocuments key={org.id} auth={auth} adminOrgId={org.id} onLoaded={setReviewEvidence} checkedIds={reviewedDocumentIds} onChecked={setReviewedDocumentIds} onPdfFullscreenChange={handlePdfFullscreenChange} />
                 <label className="fm-check-row">
                   <input
                     type="checkbox"
@@ -315,11 +342,11 @@ export function PlatformAdmin({ auth }: { auth: string }) {
             )}
           </div>
           <div className="fs-review-footer">
-            <p>{org ? "Review the evidence and provide a reason (at least 20 characters)." : "Provide a response of at least 20 characters."}</p>
+            <p>{org?.status === "Cancelled" ? "The owner cancelled this request. It cannot be approved until they resubmit." : org ? "Review the evidence and provide a reason (at least 20 characters)." : "Provide a response of at least 20 characters."}</p>
             <div className="fs-actions">
               <Button
                 variant="outline"
-                disabled={busy || reason.trim().length < 20 || (!!org && (!reviewEvidence || !reviewed))}
+                disabled={busy || reason.trim().length < 20 || (!!org && (org.status === "Cancelled" || !reviewEvidence || !reviewed))}
                 onClick={() =>
                   void decide(org ? "Changes requested" : "In review")
                 }
@@ -327,7 +354,7 @@ export function PlatformAdmin({ auth }: { auth: string }) {
                 {org ? "Request changes" : "Keep in review"}
               </Button>
               <Button
-                disabled={busy || reason.trim().length < 20 || (!!org && (!reviewEvidence?.documents.length || reviewedDocumentIds.length !== reviewEvidence.documents.length || !reviewed))}
+                disabled={busy || reason.trim().length < 20 || (!!org && (org.status === "Cancelled" || !reviewEvidence?.documents.length || reviewedDocumentIds.length !== reviewEvidence.documents.length || !reviewed))}
                 onClick={() => void decide(org ? "Verified" : "Resolved")}
               >
                 {org ? "Approve organization" : "Resolve case"}

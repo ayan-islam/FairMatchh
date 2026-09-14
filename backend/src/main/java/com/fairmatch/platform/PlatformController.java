@@ -24,8 +24,11 @@ class PlatformController {
     @PostMapping("/api/account/cases") PlatformService.SupportCase createCase(@Valid @RequestBody PlatformService.CaseInput r,Principal p){return platform.createCase(platform.account(p.getName()),r);}
     @GetMapping("/api/employer/organization") PlatformService.Organization organization(Principal p){return platform.organization(platform.organizationId(p.getName()));}
     @PutMapping("/api/employer/organization") PlatformService.Organization organization(@Valid @RequestBody PlatformService.OrganizationInput r,Principal p){return platform.saveOrganization(platform.organizationId(p.getName()),r,p.getName());}
+    @PostMapping("/api/employer/organization/verification/cancel") PlatformService.Organization cancelVerification(@Valid @RequestBody PlatformService.OrganizationVersion r,Principal p){return platform.cancelVerification(platform.organizationId(p.getName()),r.expectedVersion(),p.getName());}
+    @PostMapping("/api/employer/organization/verification/resubmit") PlatformService.Organization resubmitVerification(@Valid @RequestBody PlatformService.OrganizationVersion r,Principal p){return platform.resubmitVerification(platform.organizationId(p.getName()),r.expectedVersion(),p.getName());}
     @GetMapping("/api/employer/members") List<PlatformService.Member> members(Principal p){return platform.members(platform.organizationId(p.getName()));}
     @GetMapping("/api/admin/organizations") List<PlatformService.Organization> organizations(){return platform.organizations();}
+    @PostMapping("/api/admin/organizations/cancelled/clear") Map<String,Long> clearCancelled(Principal p){return Map.of("cleared",platform.clearCancelledOrganizations(p.getName()));}
     @PostMapping("/api/admin/organizations/{id}/review") PlatformService.Organization verify(@PathVariable String id,@Valid @RequestBody PlatformService.OrganizationDecision r,Principal p){return platform.verify(id,r,p.getName());}
     @GetMapping("/api/admin/cases") List<PlatformService.SupportCase> allCases(){return platform.cases(null);}
     @PostMapping("/api/admin/cases/{id}/review") PlatformService.SupportCase resolve(@PathVariable String id,@Valid @RequestBody PlatformService.Decision r,Principal p){return platform.resolveCase(id,r,p.getName());}

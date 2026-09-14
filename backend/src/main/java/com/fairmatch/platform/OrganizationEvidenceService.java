@@ -30,7 +30,7 @@ public class OrganizationEvidenceService {
     public List<Evidence> list(String org){return mongo.find(Query.query(Criteria.where("organizationId").is(org)).with(Sort.by("createdAt","id")),Evidence.class);}
     Evidence owned(String org,String id){var result=mongo.findOne(Query.query(Criteria.where("_id").is(id).and("organizationId").is(org)),Evidence.class);if(result==null)throw new ApiException(HttpStatus.NOT_FOUND,"Document not found.");return result;}
     void changed(String org,long version){
-        var updated=mongo.updateFirst(Query.query(Criteria.where("_id").is(org).and("version").is(version)),new Update().inc("version",1).set("status","Pending").set("reviewReason","Supporting documents changed. Administrator review required."),PlatformService.Organization.class);
+        var updated=mongo.updateFirst(Query.query(Criteria.where("_id").is(org).and("version").is(version)),new Update().inc("version",1).set("status","Pending").set("reviewReason","Supporting documents changed. Administrator review required.").set("clearedFromAdmin",false),PlatformService.Organization.class);
         if(updated.getModifiedCount()!=1)throw new ApiException(HttpStatus.CONFLICT,"Organization evidence changed. Refresh the documents before saving.");
     }
     public Evidence upload(String org,String type,String description,String filename,byte[] bytes,long version,String actor){
