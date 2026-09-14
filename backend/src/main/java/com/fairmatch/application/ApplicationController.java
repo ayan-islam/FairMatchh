@@ -50,6 +50,7 @@ class ApplicationController {
         return applications.submitOwned(jobId,owned,a.id());
     }
     @GetMapping("/api/candidate/applications") List<ApplicationService.CandidateApplication> owned(Principal p){return applications.owned(platform.account(p.getName()).id());}
+    @PostMapping("/api/candidate/applications/{id}/cv-highlights") java.util.Map<String,Boolean> shareCvHighlights(@PathVariable String id,Principal p){applications.shareCvHighlights(platform.account(p.getName()).id(),id);return java.util.Map.of("saved",true);}
     @PostMapping("/api/candidate/applications/{id}/withdrawal") java.util.Map<String,Boolean> withdraw(@PathVariable String id,Principal p){applications.withdraw(platform.account(p.getName()).id(),id);return java.util.Map.of("saved",true);}
     @PostMapping("/api/employer/applications/{id}/review") ApplicationService.BlindApplication review(@PathVariable String id,@Valid @RequestBody ApplicationService.ReviewRequest r,Principal p){return applications.review(platform.organizationId(p.getName()),id,r,p.getName());}
     record Message(@jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(min=20,max=2000) String message){}

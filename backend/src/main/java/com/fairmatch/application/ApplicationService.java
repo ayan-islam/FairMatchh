@@ -44,7 +44,7 @@ public class ApplicationService {
         if (applications.existsByJobIdAndNormalizedContact(jobId, contact))
             throw new ApiException(HttpStatus.CONFLICT, "This contact has already applied for this job.");
         var cvSummary=ownerId!=null&&r.shareCvSummary()?platform.profile(ownerId).cvSummary():null;
-        if(r.shareCvSummary()&&(cvSummary==null||cvSummary.confirmedAt()==null))throw new ApiException(HttpStatus.BAD_REQUEST,"Confirm your CV highlights in Documents before sharing them with this employer.");
+        if(r.shareCvSummary()&&!hasCvHighlights(cvSummary))throw new ApiException(HttpStatus.BAD_REQUEST,"Confirm your CV highlights in Documents before sharing them with this employer.");
         var a = applications.insert(new ApplicationDocument("FM-" + UUID.randomUUID(), organization, jobId, r.name().trim(), contact, r.role().trim(), r.experience().trim(), r.education().trim(), r.skills().stream().map(String::trim).distinct().toList(), r.example().trim(), r.availability(), r.location(), "New", "Needs review", "2026-09-v1", Instant.now(), null, null,ownerId,cvSummary));
         jobs.countApplication(jobId);
         audit.record(organization, "APPLICATION_SUBMITTED", a.id());
@@ -92,7 +92,25 @@ public class ApplicationService {
         applications.findByIdAndOrganizationId(id,organizationId).ifPresent(a->platform.notify(a.ownerId(),title,message,id));
     }
     public List<CandidateApplication> owned(String ownerId) {
-        return applications.findByOwnerIdOrderByAppliedAtDesc(ownerId).stream().map(a->new CandidateApplication(a.id(),a.jobId(),a.stage(),a.appliedAt(),a.role(),a.experience(),a.education(),a.skills(),a.example(),jobs.applicationJobTitle(a.organizationId(),a.jobId()))).toList();
+        return applications.findByOwnerIdOrderByAppliedAtDesc(ownerId).stream().map(a->new CandidateApplication(a.id(),a.jobId(),a.stage(),a.appliedAt(),a.role(),a.experience(),a.education(),a.skills(),a.example(),jobs.applicationJobTitle(a.organizationId(),a.jobId()),a.cvSummary()!=null)).toList();
+    }
+    private boolean hasCvHighlights(com.fairmatch.platform.PlatformService.CvSummary summary) {
+        return summary!=null&&summary.confirmedAt()!=null&&(
+            summary.skills()!=null&&!summary.skills().isEmpty()||
+            summary.courses()!=null&&!summary.courses().isEmpty()||
+            summary.projects()!=null&&!summary.projects().isEmpty());
+    }
+    @Transactional public void shareCvHighlights(String ownerId,String id) {
+        var current=applications.findByIdAndOwnerId(id,ownerId).orElseThrow(()->new ApiException(HttpStatus.NOT_FOUND,"Application not found."));
+        if(current.cvSummary()!=null)return;
+        if(Set.of("Hired","Not selected","Withdrawn").contains(current.stage()))throw new ApiException(HttpStatus.CONFLICT,"CV highlights cannot be added after a final decision.");
+        var summary=platform.profile(ownerId).cvSummary();
+        if(!hasCvHighlights(summary))throw new ApiException(HttpStatus.BAD_REQUEST,"Confirm your CV highlights in Documents before sharing them with this employer.");
+        var saved=mongo.findAndModify(Query.query(Criteria.where("_id").is(id).and("ownerId").is(ownerId).and("cvSummary").is(null).and("stage").nin("Hired","Not selected","Withdrawn")),
+            new Update().set("cvSummary",summary).inc("rankingFence",1),FindAndModifyOptions.options().returnNew(true),ApplicationDocument.class);
+        if(saved==null)throw new ApiException(HttpStatus.CONFLICT,"This application changed. Refresh and try again.");
+        audit.record(saved.organizationId(),"CV_HIGHLIGHTS_SHARED",id,"Candidate shared a reviewed compact CV summary for this application",ownerId);
+        platform.notifyOrganization(saved.organizationId(),"Candidate shared CV highlights","New skills, courses and projects are available in the application evidence review.",id);
     }
     @Transactional public void withdraw(String ownerId,String id) {
         var old=applications.findByIdAndOwnerId(id,ownerId).orElseThrow(()->new ApiException(HttpStatus.NOT_FOUND,"Application not found."));
@@ -158,7 +176,7 @@ public class ApplicationService {
     }
     @org.springframework.data.mongodb.core.mapping.Document("application_messages")
     public record ConversationMessage(@org.springframework.data.annotation.Id String id,String organizationId,String applicationId,String sender,String message,Instant at){}
-    public record CandidateApplication(String id,String jobId,String stage,Instant appliedAt,String role,String experience,String education,List<String> skills,String example,String jobTitle){}
+    public record CandidateApplication(String id,String jobId,String stage,Instant appliedAt,String role,String experience,String education,List<String> skills,String example,String jobTitle,boolean cvHighlightsShared){}
     public record ReviewRequest(@jakarta.validation.constraints.Pattern(regexp="Strong evidence|Consider|Needs review") @jakarta.validation.constraints.NotNull String band,
         @jakarta.validation.constraints.NotBlank String expectedBand,@jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max=2000) String reason){}
 

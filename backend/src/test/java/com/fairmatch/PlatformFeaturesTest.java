@@ -147,6 +147,13 @@ class PlatformFeaturesTest {
             var ranking=call(get("/api/employer/jobs/"+cvJobId+"/ranking"),employer,null,200);
             assertThat(ranking.at("/autoRanked/0/matches/0/source").asText()).isEqualTo("cv_courses");
             assertThat(ranking.at("/autoRanked/0/score").asDouble()).isGreaterThan(0);
+            var olderJobId=call(post("/api/employer/jobs"),employer,cvJob,201).get("id").asText();
+            var olderApplicationId=call(post("/api/candidate/jobs/"+olderJobId+"/applications"),token,application(),201).get("id").asText();
+            assertThat(call(get("/api/candidate/applications"),token,null,200).toString()).contains("\"cvHighlightsShared\":false");
+            call(post("/api/candidate/applications/"+olderApplicationId+"/cv-highlights"),stranger,Map.of(),404);
+            call(post("/api/candidate/applications/"+olderApplicationId+"/cv-highlights"),token,Map.of(),200);
+            assertThat(call(get("/api/candidate/applications"),token,null,200).toString()).contains("\"cvHighlightsShared\":true");
+            assertThat(call(get("/api/employer/jobs/"+olderJobId+"/ranking"),employer,null,200).at("/autoRanked/0/matches/0/source").asText()).isEqualTo("cv_courses");
             var refreshed=call(post("/api/candidate/documents/"+id+"/extraction"),token,Map.of(),200);
             assertThat(refreshed.get("pages")).isEqualTo(document.get("pages"));
             assertThat(refreshed.get("status").asText()).isEqualTo("Needs confirmation");

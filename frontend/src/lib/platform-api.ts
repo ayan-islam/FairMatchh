@@ -46,6 +46,7 @@ export type OwnApplication = {
   education: string;
   skills: string[];
   example: string;
+  cvHighlightsShared: boolean;
 };
 export type Notice = {
   id: string;

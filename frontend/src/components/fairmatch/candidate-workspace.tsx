@@ -69,6 +69,7 @@ export function CandidateWorkspace({
   const [query, setQuery] = useState("");
   const [support, setSupport] = useState(false);
   const [withdraw, setWithdraw] = useState<OwnApplication | null>(null);
+  const [shareTarget, setShareTarget] = useState<OwnApplication | null>(null);
   const [caseForm, setCaseForm] = useState({
     subject: "",
     category: "Candidate appeal",
@@ -127,6 +128,9 @@ export function CandidateWorkspace({
         (j.title + " " + j.department + " " + j.location)
           .toLowerCase().includes(query.toLowerCase()),
       );
+  const cvHighlightsReady = !!profile.cvSummary?.confirmedAt && !!(
+    profile.cvSummary.skills?.length || profile.cvSummary.courses?.length || profile.cvSummary.projects?.length
+  );
   return (
     <main className="fs-workspace" id="main-content">
       <div className="fs-heading">
@@ -241,6 +245,9 @@ export function CandidateWorkspace({
                 <p>Submitted {new Date(a.appliedAt).toLocaleString("en-GB")}</p>
                 <p>{a.experience}</p>
                 <p>{a.skills.join(" · ")}</p>
+                {a.cvHighlightsShared ? <p className="fm-muted">Compact CV highlights shared with this employer.</p> :
+                  !["Hired", "Not selected", "Withdrawn"].includes(a.stage) && cvHighlightsReady ?
+                    <Button variant="outline" disabled={busy} onClick={() => setShareTarget(a)}>Share compact CV highlights</Button> : null}
                 <Button variant="outline" onClick={() => setConversation(a.id)}>
                   Supporting information
                 </Button>
@@ -446,6 +453,31 @@ export function CandidateWorkspace({
           }}
         />
       )}
+      <Dialog open={!!shareTarget} onOpenChange={(open) => !open && !busy && setShareTarget(null)}>
+        <DialogContent className="fm-dialog">
+          <DialogHeader>
+            <DialogTitle>Share CV highlights?</DialogTitle>
+            <DialogDescription>
+              The employer for {shareTarget?.jobTitle || shareTarget?.role} will see these candidate-confirmed claims in this application. Your original PDF stays private.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="fm-dialog-body fs-form">
+            <div><strong>Skills</strong><p>{profile.cvSummary?.skills?.join(" · ") || "None"}</p></div>
+            <div><strong>Courses</strong><p>{profile.cvSummary?.courses?.join(" · ") || "None"}</p></div>
+            <div><strong>Projects</strong><p>{profile.cvSummary?.projects?.join(" · ") || "None"}</p></div>
+            <p className="fm-muted">Sharing updates the evidence available for review and automatic comparison. It does not change your hiring stage.</p>
+            {error && <p className="fm-error" role="alert">{error}</p>}
+          </div>
+          <div className="fs-actions">
+            <Button variant="outline" disabled={busy} onClick={() => setShareTarget(null)}>Cancel</Button>
+            <Button disabled={busy} onClick={() => void run(async () => {
+              if (!shareTarget) return;
+              await request(`candidate/applications/${encodeURIComponent(shareTarget.id)}/cv-highlights`, "POST", {}, auth);
+              setShareTarget(null);
+            }, "CV highlights shared with this employer")}>Share highlights</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <Dialog open={support} onOpenChange={(v) => !busy && setSupport(v)}>
         <DialogContent className="fm-dialog">
           <DialogHeader>
@@ -651,7 +683,7 @@ function ApplicationForm({
             Submitting as {user.name} ({user.contact}). You can upload and
             confirm a CV in Documents before applying.
           </p>
-          {profile.cvSummary?.confirmedAt ? <label className="fm-check-row">
+          {profile.cvSummary?.confirmedAt && (profile.cvSummary.skills?.length || profile.cvSummary.courses?.length || profile.cvSummary.projects?.length) ? <label className="fm-check-row">
             <input type="checkbox" checked={!!form.shareCvSummary} onChange={e=>setForm({...form,shareCvSummary:e.target.checked})}/>
             <span>Share my reviewed CV highlights (skills, courses and projects) with this employer. The original PDF remains private.</span>
           </label> : <p className="fm-muted">To share a compact CV summary, confirm highlights in Documents first. You can still apply without a CV.</p>}

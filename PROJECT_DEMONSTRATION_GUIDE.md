@@ -168,9 +168,9 @@ The signed-in recruiter is shown by `recruiter-workspace.tsx`; `team-access.tsx`
 
 ### Demonstrate extraction carefully
 
-1. Sign in as the candidate and open **Documents**. Upload a PDF with clear Experience, Education and Skills headings.
+1. Sign in as the candidate and open **Documents**. Upload a PDF with clear Experience, Education, Skills, Courses and Projects headings.
 2. Open the extracted text and suggested sections. Show a page-linked source highlight so the teacher can compare the suggestion with its origin.
-3. Select useful text, copy it into the editable profile fields and correct mistakes. **Confirm** the reviewed fields.
+3. Select useful text, copy it into the editable profile fields and correct mistakes. Prepare a short list of important skills, courses and projects in **Compact CV highlights**, then **Confirm** the reviewed fields.
 4. Open **Profile** and refresh. Show that the confirmed information remains.
 5. If a CV contains scanned pages or broken embedded text, use **Read with OCR**. Inspect the result and warnings rather than assuming every word is correct.
 6. Demonstrate **Refresh extraction** if useful. It rereads the existing file; it does not automatically replace an already confirmed profile or submitted application.
@@ -179,7 +179,7 @@ The signed-in recruiter is shown by `recruiter-workspace.tsx`; `team-access.tsx`
 
 The feature supports private PDF storage, text extraction, local English/Bangla OCR, page sources, heading-based suggestions, candidate confirmation, download and deletion. A PDF is limited to 8 MB and ten pages. Reading order, unusual layouts and OCR may produce mistakes, so manual correction remains part of the workflow.
 
-The original PDF stays in MinIO. Java saves owner-linked metadata and extracted results in MongoDB. The candidate chooses what becomes their reusable profile. A later application is a separate snapshot, so changing the profile does not rewrite an earlier submission.
+The original PDF stays in MinIO. Java saves owner-linked metadata and extracted results in MongoDB. The candidate chooses what becomes their reusable profile. The compact highlights are only candidate-confirmed claims, not verified qualifications. An employer sees them only when the candidate chooses to share them with that application. A later application is a separate snapshot, so changing the profile does not rewrite an earlier submission.
 
 ### Code to open
 
@@ -198,7 +198,7 @@ For a deeper explanation, use `FairMatch_CV_Extraction_Explained.pdf` and `OCR_S
 2. Check the position, organization, requirements and deadline. The linked view should contain only that job. The general candidate workspace may offer the broader jobs list when no job link is supplied.
 3. Choose **View and apply**. Review or edit your experience, education, skills, work example, availability and location.
 4. Save an unfinished application draft. Close and reopen it to show recovery of saved fields.
-5. Complete the consent and evidence-confirmation steps, then submit.
+5. If you confirmed compact CV highlights in Documents, optionally choose to share them with this application. Complete the consent and evidence-confirmation steps, then submit.
 6. Open **My applications**. Show the application reference and initial **New** stage. Reload to demonstrate that the submission is stored.
 
 ### Explain what is saved
@@ -209,7 +209,7 @@ The same candidate contact cannot create repeated applications for the same job.
 
 ### Follow-up actions
 
-**Supporting information** opens the saved conversation with the employer. **Withdraw** asks for confirmation, then permanently removes the candidate-owned application and its linked operational records. It disappears from both workspaces, the job becomes available to apply for again and the job application count decreases. FairMatch retains only a non-identifying audit event stating that a withdrawal occurred. Candidate-visible interviews, notifications and support requests are separate tabs.
+**Supporting information** opens the saved conversation with the employer. If you submitted before confirming your CV, **Share compact CV highlights** lets you review and share them later with that one active application. The employer then sees skills, courses and projects beside the published job requirements; automatic comparison refreshes. **Withdraw** asks for confirmation, then permanently removes the candidate-owned application and its linked operational records. It disappears from both workspaces, the job becomes available to apply for again and the job application count decreases. FairMatch retains only a non-identifying audit event stating that a withdrawal occurred. Candidate-visible interviews, notifications and support requests are separate tabs.
 
 ### Code to open
 
@@ -223,7 +223,7 @@ The same candidate contact cannot create repeated applications for the same job.
 ### Employer demonstration
 
 1. Open **Applications** and find the reference shown in the candidate workspace.
-2. Explain that the employer response omits structured name and contact fields. Review skills, experience and the work example.
+2. Explain that the employer response omits structured name and contact fields. Open the candidate evidence dialog and compare published requirements with submitted skills, experience, work examples and any candidate-shared compact CV highlights.
 3. Open **Review evidence**. For each requirement, choose Supported, Partial or Needs evidence, select the submitted source, copy an exact quote where required and record your reason. Save and reopen the review.
 4. Use **Supporting information** to request a relevant clarification. Switch to Candidate, reply on that application, then return to Employer to show the saved reply.
 5. Open **Hiring pipeline**. Move the application to a suitable stage and enter a job-related reason. Refresh and show that the card stays in that stage.
@@ -255,7 +255,7 @@ The evidence-band summary is Strong evidence when every requirement is Supported
 1. Open **Employer > Candidate ranking** and choose a job and stage. Every application appears under **Ranked candidates** without recruiter ratings.
 2. Click a candidate ID to open the action centre. Show that evidence, requirement review, supporting information, interview scheduling, optional rubric assessment and hiring-stage movement are available without leaving the ranking workflow.
 3. Open **Why this position?** to show matched words, the submitted passage and points. Refresh after a new application or candidate reply to see the order change.
-4. Explain that this measures text overlap, not ability. A rubric supplies weights; otherwise weights are equal. Private CVs are excluded. Recruiters inspect the evidence before decisions.
+4. Explain that this measures text overlap, not ability. A rubric supplies weights; otherwise weights are equal. The original private CV is excluded, but candidate-shared skills, courses and projects can be matching sources. Recruiters inspect the evidence before decisions.
 
 ### Configure optional deeper assessment
 
@@ -273,7 +273,7 @@ The automatic list orders every application; the human list ranks only complete,
 
 > Say: "Java creates a first-pass order automatically from submitted text and shows why each item matched. The recruiter can then inspect candidates and optionally do a deeper rubric assessment. We never turn a missing text match into a claim that someone lacks a skill."
 
-Code: `candidate-ranking.tsx`, `application/AutomaticEvidenceMatcher.java` and `application/RankingController.java`. The implementation does not automatically import interview evaluations, read private CVs for employer ranking or make hiring decisions.
+Code: `candidate-ranking.tsx`, `application/AutomaticEvidenceMatcher.java` and `application/RankingController.java`. The implementation does not automatically import interview evaluations, read the private original CV for employer ranking or make hiring decisions.
 
 <!-- page -->
 # 11. Explain the two ranking calculations

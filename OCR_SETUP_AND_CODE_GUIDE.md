@@ -6,9 +6,9 @@ The installed project can now read image-only PDF pages using real Tesseract OCR
 
 1. Start `START_FAIRMATCH.cmd` and sign in as a candidate.
 2. Open Documents and upload a PDF CV, up to 8 MB and ten pages. Pages with fewer than 60 embedded text characters automatically use OCR.
-3. Review the page text and its warnings. Suggestions only come from recognized section headings.
+3. Review the page text and its warnings. Suggestions for experience, education, skills, courses and projects come from recognized section headings.
 4. Open a suggestion's source, copy it into the editable form and correct any reading errors.
-5. Check the confirmation box and save. Reload Profile to show the saved fields.
+5. Edit the compact skills, courses and projects list, check the confirmation box and save. Reload Profile to show the saved fields.
 6. For an existing CV with broken embedded text, choose **Read with OCR**. This rereads the original PDF. Your confirmed profile and submitted applications remain unchanged.
 
 Use your own CV for the demonstration. The synthetic English/Bangla PDFs in `document-worker/tests/fixtures` are for development tests and are not added to the main application database.
@@ -19,7 +19,7 @@ The browser sends an authenticated request to Java. `DocumentController.java` ch
 
 `document-worker/extract_text.py` first reads embedded PDF text with pypdf. For a scanned page, `ocr.py` renders it with pypdfium2 and passes PNG bytes to Tesseract using the English and Bengali models. `Read with OCR` requests this process even when the PDF already contains text. OCR output is marked `tesseract-eng-ben`; normal text is marked `embedded-text`.
 
-The extractor recognizes headings and proposes verbatim text with page numbers and source offsets. It returns extraction version 3. Java stores that metadata in MongoDB. The original PDF stays private in MinIO. The frontend highlights the source and lets the candidate edit or ignore each suggestion. Only the separate confirmation endpoint saves profile fields.
+The extractor recognizes headings and proposes verbatim text with page numbers and source offsets. It returns extraction version 3. Java stores that metadata in MongoDB. The original PDF stays private in MinIO. The frontend highlights the source and lets the candidate edit or ignore each suggestion. Only the separate confirmation endpoint saves profile fields and compact CV highlights. While applying, or later from **My applications**, the candidate can choose to share those confirmed highlights with one application. The employer sees only that compact snapshot, not the PDF.
 
 This is document transcription, not a qualification check or hiring model. OCR can misread letters, especially Bangla joined characters, and unfamiliar headings or multi-column layouts can produce poor section boundaries. The test Bangla scan read useful words but misread one heading; the application keeps the original output and shows a warning rather than silently inventing a correction. A candidate must check the original PDF.
 
@@ -51,7 +51,7 @@ The installer needs internet. Reading CVs after installation does not. If OCR is
 
 ## Verification
 
-Ten Python tests pass, including actual English and Bangla image-only PDFs, source spans, missing OCR, timeout fallback and invalid PDF limits. The backend integration test also exercises forced OCR through the authenticated Java endpoint, denies another candidate access and verifies that an already confirmed profile is unchanged. These checks use synthetic fixtures and isolated test databases.
+Eleven Python tests pass, including actual English and Bangla image-only PDFs, page-linked course/project suggestions, source spans, missing OCR, timeout fallback and invalid PDF limits. The backend integration test also exercises forced OCR through the authenticated Java endpoint, denies another candidate access, verifies that an already confirmed profile is unchanged, and checks candidate-controlled sharing with an existing application. These checks use synthetic fixtures and isolated test databases.
 
 Run Python tests from the project folder:
 
