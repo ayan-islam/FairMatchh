@@ -43,7 +43,9 @@ public class ApplicationService {
         if (!contact.contains("@")) contact = contact.replaceAll("[ ()-]", "");
         if (applications.existsByJobIdAndNormalizedContact(jobId, contact))
             throw new ApiException(HttpStatus.CONFLICT, "This contact has already applied for this job.");
-        var a = applications.insert(new ApplicationDocument("FM-" + UUID.randomUUID(), organization, jobId, r.name().trim(), contact, r.role().trim(), r.experience().trim(), r.education().trim(), r.skills().stream().map(String::trim).distinct().toList(), r.example().trim(), r.availability(), r.location(), "New", "Needs review", "2026-09-v1", Instant.now(), null, null,ownerId));
+        var cvSummary=ownerId!=null&&r.shareCvSummary()?platform.profile(ownerId).cvSummary():null;
+        if(r.shareCvSummary()&&(cvSummary==null||cvSummary.confirmedAt()==null))throw new ApiException(HttpStatus.BAD_REQUEST,"Confirm your CV highlights in Documents before sharing them with this employer.");
+        var a = applications.insert(new ApplicationDocument("FM-" + UUID.randomUUID(), organization, jobId, r.name().trim(), contact, r.role().trim(), r.experience().trim(), r.education().trim(), r.skills().stream().map(String::trim).distinct().toList(), r.example().trim(), r.availability(), r.location(), "New", "Needs review", "2026-09-v1", Instant.now(), null, null,ownerId,cvSummary));
         jobs.countApplication(jobId);
         audit.record(organization, "APPLICATION_SUBMITTED", a.id());
         platform.notify(ownerId,"Application submitted","Your application was saved and is ready for employer review.",a.id());
@@ -161,7 +163,7 @@ public class ApplicationService {
         @jakarta.validation.constraints.NotBlank String expectedBand,@jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max=2000) String reason){}
 
     private BlindApplication blind(ApplicationDocument a) {
-        return new BlindApplication(a.id(), a.jobId(), "To confirm", a.skills(), a.band(), a.stage(), a.appliedAt().atZone(ZoneId.of("Asia/Dhaka")).toLocalDate().toString(), a.experience(), a.education(), a.example(), a.availability(), a.location(), a.stageReason(), a.stageChangedAt());
+        return new BlindApplication(a.id(), a.jobId(), "To confirm", a.skills(), a.band(), a.stage(), a.appliedAt().atZone(ZoneId.of("Asia/Dhaka")).toLocalDate().toString(), a.experience(), a.education(), a.example(), a.availability(), a.location(), a.stageReason(), a.stageChangedAt(),a.cvSummary());
     }
 
     public record Receipt(String id, String jobId, String status, Instant submittedAt) {
@@ -169,6 +171,6 @@ public class ApplicationService {
 
     public record BlindApplication(String id, String jobId, String experience, List<String> skills, String band,
                                    String stage, String applied, String evidence, String education, String example,
-                                   String availability, String location, String stageReason, Instant stageChangedAt) {
+                                   String availability, String location, String stageReason, Instant stageChangedAt,com.fairmatch.platform.PlatformService.CvSummary cvSummary) {
     }
 }

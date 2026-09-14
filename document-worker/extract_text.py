@@ -14,10 +14,12 @@ HEADINGS = {
     "education": {"education", "academic qualifications", "academic qualification", "academic background", "educational qualifications", "educational qualification", "শিক্ষাগত যোগ্যতা", "শিক্ষা"},
     "experience": {"experience", "work experience", "professional experience", "employment history", "career history", "কর্ম অভিজ্ঞতা", "কাজের অভিজ্ঞতা", "অভিজ্ঞতা"},
     "skills": {"skills", "technical skills", "key skills", "professional skills", "দক্ষতা", "প্রযুক্তিগত দক্ষতা"},
+    "courses": {"courses", "relevant courses", "coursework", "relevant coursework", "training", "training and courses", "প্রশিক্ষণ", "কোর্স"},
+    "projects": {"projects", "academic projects", "selected projects", "project experience", "প্রকল্প", "প্রজেক্ট"},
     "role": {"current position", "current role", "job title", "বর্তমান পদ"},
 }
-STOP_HEADINGS = {"references", "reference", "personal information", "personal details", "contact", "contact information", "languages", "interests", "hobbies", "declaration", "objective", "career objective", "summary", "professional summary", "projects", "certifications", "awards", "রেফারেন্স", "ব্যক্তিগত তথ্য", "যোগাযোগ", "ভাষা"}
-LIMITS = {"role": 160, "education": 1000, "experience": 6000, "skills": 1800}
+STOP_HEADINGS = {"references", "reference", "personal information", "personal details", "contact", "contact information", "languages", "interests", "hobbies", "declaration", "objective", "career objective", "summary", "professional summary", "certifications", "awards", "রেফারেন্স", "ব্যক্তিগত তথ্য", "যোগাযোগ", "ভাষা"}
+LIMITS = {"role": 160, "education": 1000, "experience": 6000, "skills": 1800, "courses": 1400, "projects": 2200}
 
 def normalize_heading(line: str) -> str:
     return re.sub(r"\s+", " ", line.strip().strip(":：")).casefold()

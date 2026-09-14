@@ -69,7 +69,7 @@ class CandidatePrivacyController {
         security.rateLimit("candidate-export", account.id(), 6, 3600);
         var startedAt = Instant.now();
         var owned = Criteria.where("ownerId").is(account.id());
-        var applications = read("applications", owned, "jobId","stage","appliedAt","role","experience","education","skills","example","availability","location","consentVersion","name","normalizedContact");
+        var applications = read("applications", owned, "jobId","stage","appliedAt","role","experience","education","skills","example","availability","location","cvSummary","consentVersion","name","normalizedContact");
         var applicationIds = applications.stream().map(d -> d.getString("_id")).toList();
         var body = new LinkedHashMap<String,Object>();
         body.put("schemaVersion", 1);

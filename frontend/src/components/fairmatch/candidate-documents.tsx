@@ -21,7 +21,7 @@ type Resume = {
   text: string;
   createdAt: string;
   pages?: { number: number; text: string; method: string; truncated: boolean }[];
-  suggestions?: { field: "role" | "experience" | "education" | "skills"; value: string; page: number; start: number; end: number; method: string }[];
+  suggestions?: { field: "role" | "experience" | "education" | "skills" | "courses" | "projects"; value: string; page: number; start: number; end: number; method: string }[];
   warnings?: string[];
   extractionVersion?: number;
 };
@@ -231,6 +231,9 @@ function ConfirmResume({
   onSaved: () => void;
 }) {
   const [form, setForm] = useState(profile);
+  const [highlightSkills, setHighlightSkills] = useState((profile.cvSummary?.skills?.length ? profile.cvSummary.skills : profile.skills).join("\n"));
+  const [courses, setCourses] = useState(profile.cvSummary?.courses?.join("\n") || "");
+  const [projects, setProjects] = useState(profile.cvSummary?.projects?.join("\n") || "");
   const [source, setSource] = useState<NonNullable<Resume["suggestions"]>[number]>();
   const [notice, setNotice] = useState("");
   const sourceRef = useRef<HTMLElement>(null);
@@ -242,6 +245,11 @@ function ConfirmResume({
       const skills = [...new Map([...form.skills, ...additions].map(s=>[s.toLowerCase(),s])).values()];
       if (skills.length>30 || skills.some(s=>s.length>100)) {setError("This section needs editing. Enter at most 30 skills, each up to 100 characters.");return;}
       setForm({...form,skills});
+      setHighlightSkills(skills.slice(0,8).join("\n"));
+    } else if (suggestion.field === "courses") {
+      setCourses(suggestion.value.split(/\r?\n|[;•|]+/).map(s=>s.replace(/^[-–]\s*/, "").trim()).filter(Boolean).slice(0,6).join("\n"));
+    } else if (suggestion.field === "projects") {
+      setProjects(suggestion.value.split(/\r?\n|[;•|]+/).map(s=>s.replace(/^[-–]\s*/, "").trim()).filter(Boolean).slice(0,5).join("\n"));
     } else setForm({...form,[suggestion.field]:suggestion.value});
     setConfirmed(false);setError("");setSource(suggestion);
     setNotice("Suggestion copied to the editable form. Review it before confirming; your saved profile has not changed.");
@@ -265,7 +273,7 @@ function ConfirmResume({
           {!!resume.suggestions?.length && <section className="fs-suggestions" aria-label="Unverified profile suggestions">
             <h3>Suggestions from section headings</h3><p>Your current profile stays below. Choose a suggestion only after checking its page.</p>
             {resume.suggestions.map((suggestion,i)=><article key={i}>
-              <strong>{({role:"Position",experience:"Experience",education:"Education",skills:"Skills"})[suggestion.field]} · Page {suggestion.page}</strong>
+              <strong>{({role:"Position",experience:"Experience",education:"Education",skills:"Skills",courses:"Courses",projects:"Projects"})[suggestion.field]} · Page {suggestion.page}</strong>
               <p>{suggestion.value}</p>
               <div className="fs-actions"><Button type="button" variant="outline" onClick={()=>setSource(suggestion)}>View page {suggestion.page} source</Button><Button type="button" variant="outline" onClick={()=>applySuggestion(suggestion)}>{suggestion.field==="skills"?"Add suggested skills":"Use instead of current field"}</Button></div>
             </article>)}
@@ -320,6 +328,13 @@ function ConfirmResume({
               }}
             />
           </Field>
+          <section className="fs-cv-highlight-editor" aria-label="Compact CV highlights">
+            <h3>Compact CV highlights</h3>
+            <p>Keep only the most relevant items. These are saved after your review and shared only if you opt in while applying. One item per line; remove names, contact details and unrelated personal information.</p>
+            <Field label="Important skills (up to 8)"><Textarea value={highlightSkills} rows={3} onChange={e=>{setHighlightSkills(e.target.value);setConfirmed(false);}} placeholder="One skill per line"/></Field>
+            <Field label="Relevant courses or training (up to 6)"><Textarea value={courses} rows={3} onChange={e=>{setCourses(e.target.value);setConfirmed(false);}} placeholder="One course per line"/></Field>
+            <Field label="Relevant projects (up to 5)"><Textarea value={projects} rows={3} onChange={e=>{setProjects(e.target.value);setConfirmed(false);}} placeholder="One project and your contribution per line"/></Field>
+          </section>
           <p>
             Keep names and contact details out of the evidence fields used for
             blind review.
@@ -344,6 +359,7 @@ function ConfirmResume({
             setBusy(true);
             setError("");
             try {
+              const lines=(value:string,max:number,length:number,label:string)=>{const items=[...new Set(value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean))];if(items.length>max||items.some(item=>item.length>length))throw new Error(`${label}: use at most ${max} lines, each no longer than ${length} characters.`);return items;};
               await request(
                 `candidate/documents/${resume.id}/confirmation`,
                 "POST",
@@ -353,6 +369,11 @@ function ConfirmResume({
                     experience: form.experience,
                     education: form.education,
                     skills: form.skills.map((s) => s.trim()).filter(Boolean),
+                  },
+                  highlights: {
+                    skills: lines(highlightSkills,8,100,"Important skills"),
+                    courses: lines(courses,6,160,"Courses"),
+                    projects: lines(projects,5,240,"Projects"),
                   },
                   confirmed,
                 },

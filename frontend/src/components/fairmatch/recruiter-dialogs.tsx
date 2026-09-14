@@ -418,8 +418,21 @@ export function EvidenceDialog({
               <strong>{candidate.availability || "Not provided"}</strong>
             </div>
           </div>
-          <h3 className="fm-subheading">Published job requirements</h3>
-          <ul>{job?.requirements.map(r => <li key={r}>{r}</li>)}</ul>
+          <section className="fm-cv-comparison" aria-label="Job requirements and CV highlights">
+            <div className="fm-cv-comparison-header">
+              <div><h3>Requirement alignment</h3><p>Compare the published requirements with the candidate&apos;s shared, reviewed CV highlights.</p></div>
+              {candidate.cvSummary?.confirmedAt&&<StatusBadge tone="neutral">Candidate confirmed</StatusBadge>}
+            </div>
+            <div className="fm-cv-comparison-grid">
+              <div className="fm-cv-comparison-side"><h4>Job requirements</h4>{job?.requirements?.length ? <ul>{job.requirements.map((requirement,index)=><li key={`${index}-${requirement}`}>{requirement}</li>)}</ul> : <p>No requirements available for this job.</p>}</div>
+              <div className="fm-cv-comparison-side"><h4>Compact CV highlights</h4>{candidate.cvSummary?.confirmedAt ? <>
+                <div className="fm-cv-highlight-group"><strong>Important skills</strong>{candidate.cvSummary.skills?.length ? <div className="fm-cv-skill-list">{candidate.cvSummary.skills.map((skill,index)=><span key={`${index}-${skill}`}>{skill}</span>)}</div> : <p>None shared</p>}</div>
+                <div className="fm-cv-highlight-group"><strong>Relevant courses</strong>{candidate.cvSummary.courses?.length ? <ul>{candidate.cvSummary.courses.map((course,index)=><li key={`${index}-${course}`}>{course}</li>)}</ul> : <p>None shared</p>}</div>
+                <div className="fm-cv-highlight-group"><strong>Relevant projects</strong>{candidate.cvSummary.projects?.length ? <ul>{candidate.cvSummary.projects.map((project,index)=><li key={`${index}-${project}`}>{project}</li>)}</ul> : <p>None shared</p>}</div>
+              </> : <p>No CV highlights were shared with this application. Review the submitted application evidence below.</p>}</div>
+            </div>
+            <p className="fm-cv-comparison-note">These are candidate-confirmed claims, not verified qualifications. The private original PDF is not available to employers. Ask for clarification or assess exact submitted evidence before deciding.</p>
+          </section>
           <h3 className="fm-subheading">Candidate skill claims</h3>
           <div className="fm-evidence-rows">
             {candidate.skills.map((skill) => (

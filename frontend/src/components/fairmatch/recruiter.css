@@ -1555,6 +1555,38 @@
   font-size: 14px;
   color: #36586a;
 }
+.fm-cv-comparison {
+  margin-top: 22px;
+  border: 1px solid #dbe7e5;
+  border-radius: 12px;
+  background: #fbfdfc;
+  overflow: hidden;
+}
+.fm-cv-comparison-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 13px;
+  border-bottom: 1px solid #e3edeb;
+}
+.fm-cv-comparison-header h3 { font-size: 15px; font-weight: 700; color: #143343; }
+.fm-cv-comparison-header p, .fm-cv-comparison-note { margin-top: 4px; color: #60708a; font-size: 12px; line-height: 1.5; }
+.fm-cv-comparison-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); }
+.fm-cv-comparison-side { min-width: 0; padding: 16px 18px; }
+.fm-cv-comparison-side + .fm-cv-comparison-side { border-left: 1px solid #e3edeb; background: #fff; }
+.fm-cv-comparison-side h4 { margin: 0 0 11px; color: #143343; font-size: 13px; font-weight: 700; }
+.fm-cv-comparison-side ul { margin: 0; padding-left: 19px; color: #354b5b; font-size: 12.5px; line-height: 1.55; }
+.fm-cv-comparison-side li + li { margin-top: 6px; }
+.fm-cv-comparison-side p { margin: 0; color: #60708a; font-size: 12px; line-height: 1.55; }
+.fm-cv-highlight-group + .fm-cv-highlight-group { border-top: 1px solid #edf2f1; margin-top: 12px; padding-top: 12px; }
+.fm-cv-highlight-group > strong { display: block; color: #456071; font-size: 11px; text-transform: uppercase; letter-spacing: .045em; margin-bottom: 7px; }
+.fm-cv-skill-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.fm-cv-skill-list span { display: inline-block; border: 1px solid #cde5e1; border-radius: 5px; background: #edf8f6; color: #075f58; font-size: 12px; padding: 4px 7px; }
+.fm-cv-comparison-note { padding: 11px 18px 14px; border-top: 1px solid #e3edeb; margin: 0; }
+.fs-cv-highlight-editor { border: 1px solid #dbe7e5; border-radius: 8px; padding: 16px; background: #f9fcfb; }
+.fs-cv-highlight-editor h3 { font-size: 15px; font-weight: 700; color: #143343; }
+.fs-cv-highlight-editor > p { font-size: 12px; color: #60708a; margin: 6px 0 14px; }
 .fm-subheading {
   font-size: 14px;
   font-weight: 650;
@@ -2001,6 +2033,9 @@
     padding: 14px;
     grid-template-columns: 1fr;
   }
+  .fm-cv-comparison-grid { grid-template-columns: 1fr; }
+  .fm-cv-comparison-side + .fm-cv-comparison-side { border-left: 0; border-top: 1px solid #e3edeb; }
+  .fm-cv-comparison-header { flex-direction: column; }
   .fm-requirements > div {
     flex-wrap: wrap;
   }

@@ -33,6 +33,7 @@ export type Profile = {
   experience: string;
   education: string;
   skills: string[];
+  cvSummary?: { skills: string[]; courses: string[]; projects: string[]; confirmedAt: string } | null;
 };
 export type OwnApplication = {
   jobTitle: string;

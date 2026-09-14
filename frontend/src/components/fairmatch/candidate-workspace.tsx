@@ -565,6 +565,7 @@ function ApplicationForm({
     consent: false,
     evidenceConfirmed: false,
     finalConsent: false,
+    shareCvSummary: false,
   });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -650,6 +651,10 @@ function ApplicationForm({
             Submitting as {user.name} ({user.contact}). You can upload and
             confirm a CV in Documents before applying.
           </p>
+          {profile.cvSummary?.confirmedAt ? <label className="fm-check-row">
+            <input type="checkbox" checked={!!form.shareCvSummary} onChange={e=>setForm({...form,shareCvSummary:e.target.checked})}/>
+            <span>Share my reviewed CV highlights (skills, courses and projects) with this employer. The original PDF remains private.</span>
+          </label> : <p className="fm-muted">To share a compact CV summary, confirm highlights in Documents first. You can still apply without a CV.</p>}
           {(
             [
               "role",

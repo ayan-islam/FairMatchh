@@ -9,7 +9,7 @@ import type { Candidate } from "@/lib/demo-data";
 
 type Item = { index: number; assessment: "Supported" | "Partial" | "Needs evidence"; source: string; quote: string; reason: string };
 type Report = { applicationId: string; snapshot: string; criteria: string[]; sources: {field:string;text:string}[]; currentBand: string; version: number; reviewCurrent: boolean; latestReview?: {snapshot:string;items:Item[];band:string;actor:string;at:string} };
-const fieldNames: Record<string,string> = {experience:"Work experience",education:"Education",skills:"Skills",example:"Work example",none:"No supporting passage found"};
+const fieldNames: Record<string,string> = {experience:"Work experience",education:"Education",skills:"Skills",example:"Work example",cv_skills:"Shared CV skills",cv_courses:"Shared CV courses",cv_projects:"Shared CV projects",none:"No supporting passage found"};
 
 export function CriteriaReviewDialog({candidate,auth,onClose,onSaved}:{candidate:Candidate;auth:string;onClose:()=>void;onSaved:(saved:Candidate)=>void}) {
   const [report,setReport]=useState<Report>();

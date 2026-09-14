@@ -31,7 +31,10 @@ class DocumentController {
     record SourcePage(int number,String text,String method,boolean truncated){}
     record Suggestion(String field,String value,int page,int start,int end,String method){}
     @Document("candidate_documents") record Resume(@Id String id,String ownerId,String filename,long bytes,String status,String text,Instant createdAt,List<SourcePage> pages,List<Suggestion> suggestions,List<String> warnings,Integer extractionVersion){}
-    record Confirmation(@Valid @NotNull PlatformService.ProfileInput profile,@AssertTrue boolean confirmed){}
+    record CvHighlightsInput(@NotNull @Size(max=8) List<@NotBlank @Size(max=100) String> skills,
+        @NotNull @Size(max=6) List<@NotBlank @Size(max=160) String> courses,
+        @NotNull @Size(max=5) List<@NotBlank @Size(max=240) String> projects){}
+    record Confirmation(@Valid @NotNull PlatformService.ProfileInput profile,@Valid CvHighlightsInput highlights,@AssertTrue boolean confirmed){}
     private String owner(Principal p){return platform.account(p.getName()).id();}
     private Resume owned(String id,String owner){var r=mongo.findOne(Query.query(Criteria.where("_id").is(id).and("ownerId").is(owner)),Resume.class);if(r==null)throw new ApiException(HttpStatus.NOT_FOUND,"Document not found.");return r;}
     private byte[] worker(String id,String method,byte[] bytes) {return worker(id,method,bytes,"");}
@@ -75,6 +78,11 @@ class DocumentController {
         if(updated==null)throw new ApiException(HttpStatus.CONFLICT,"This document was removed. Refresh the list.");
         audit.record("platform","DOCUMENT_REEXTRACTED",id,"Candidate requested page-linked text extraction; profile unchanged",p.getName());return updated;
     }
-    @PostMapping("/{id}/confirmation") @org.springframework.transaction.annotation.Transactional Resume confirm(@PathVariable String id,@Valid @RequestBody Confirmation r,Principal p){var old=owned(id,owner(p));platform.saveProfile(old.ownerId(),r.profile());var saved=new Resume(old.id(),old.ownerId(),old.filename(),old.bytes(),"Confirmed",old.text(),old.createdAt(),old.pages(),old.suggestions(),old.warnings(),old.extractionVersion());mongo.save(saved);audit.record("platform","DOCUMENT_PROFILE_CONFIRMED",id,"Candidate reviewed and confirmed profile fields",p.getName());return saved;}
+    @PostMapping("/{id}/confirmation") @org.springframework.transaction.annotation.Transactional Resume confirm(@PathVariable String id,@Valid @RequestBody Confirmation r,Principal p){
+        var old=owned(id,owner(p));var h=r.highlights()==null?new CvHighlightsInput(List.of(),List.of(),List.of()):r.highlights();
+        var summary=new PlatformService.CvSummary(h.skills().stream().map(String::trim).distinct().toList(),h.courses().stream().map(String::trim).distinct().toList(),h.projects().stream().map(String::trim).distinct().toList(),Instant.now());
+        platform.saveConfirmedCvProfile(old.ownerId(),r.profile(),summary);
+        var saved=new Resume(old.id(),old.ownerId(),old.filename(),old.bytes(),"Confirmed",old.text(),old.createdAt(),old.pages(),old.suggestions(),old.warnings(),old.extractionVersion());mongo.save(saved);audit.record("platform","DOCUMENT_PROFILE_CONFIRMED",id,"Candidate reviewed profile and compact CV highlights",p.getName());return saved;
+    }
     @DeleteMapping("/{id}") Map<String,Boolean> delete(@PathVariable String id,Principal p){var r=owned(id,owner(p));worker(id,"DELETE",null);mongo.remove(r);audit.record("platform","DOCUMENT_DELETED",id,"Candidate removed private CV",p.getName());return Map.of("deleted",true);}
 }

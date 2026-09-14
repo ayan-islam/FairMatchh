@@ -46,7 +46,7 @@ class ApplicationController {
     @PostMapping("/api/candidate/jobs/{jobId}/applications") @ResponseStatus(HttpStatus.CREATED)
     ApplicationService.Receipt ownedSubmit(@PathVariable String jobId,@Valid @RequestBody ApplicationRequest r,Principal p) {
         var a=platform.account(p.getName());
-        var owned=new ApplicationRequest(a.name(),a.contact(),r.role(),r.experience(),r.education(),r.skills(),r.example(),r.availability(),r.location(),r.consent(),r.evidenceConfirmed(),r.finalConsent());
+        var owned=new ApplicationRequest(a.name(),a.contact(),r.role(),r.experience(),r.education(),r.skills(),r.example(),r.availability(),r.location(),r.consent(),r.evidenceConfirmed(),r.finalConsent(),r.shareCvSummary());
         return applications.submitOwned(jobId,owned,a.id());
     }
     @GetMapping("/api/candidate/applications") List<ApplicationService.CandidateApplication> owned(Principal p){return applications.owned(platform.account(p.getName()).id());}

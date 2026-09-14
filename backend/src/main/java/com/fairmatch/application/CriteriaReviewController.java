@@ -34,7 +34,7 @@ class CriteriaReviewController {
     }
     record EvidenceSource(String field,String text) {}
     record Item(@Min(0) int index,@NotNull @Pattern(regexp="Supported|Partial|Needs evidence") String assessment,
-        @NotNull @Pattern(regexp="experience|education|skills|example|none") String source,
+        @NotNull @Pattern(regexp="experience|education|skills|example|cv_skills|cv_courses|cv_projects|none") String source,
         @NotNull @Size(max=1000) String quote,@NotBlank @Size(min=15,max=1500) String reason) {}
     record Input(@NotBlank String snapshot,@Min(0) long expectedVersion,@NotBlank String expectedBand,
         @NotEmpty @Size(max=30) List<@Valid Item> items,@AssertTrue boolean confirmed) {}
@@ -53,8 +53,13 @@ class CriteriaReviewController {
         var application=owned(org,id);
         var job=jobs.employerJobs(org).stream().filter(j->j.id().equals(application.jobId())).findFirst()
             .orElseThrow(()->new ApiException(HttpStatus.NOT_FOUND,"Job not found."));
-        var sources=List.of(new EvidenceSource("experience",application.experience()),new EvidenceSource("education",application.education()),
-            new EvidenceSource("skills",String.join(", ",application.skills())),new EvidenceSource("example",application.example()));
+        var sources=new ArrayList<>(List.of(new EvidenceSource("experience",application.experience()),new EvidenceSource("education",application.education()),
+            new EvidenceSource("skills",String.join(", ",application.skills())),new EvidenceSource("example",application.example())));
+        if(application.cvSummary()!=null){
+            sources.add(new EvidenceSource("cv_skills",String.join(", ",application.cvSummary().skills())));
+            sources.add(new EvidenceSource("cv_courses",String.join("\n",application.cvSummary().courses())));
+            sources.add(new EvidenceSource("cv_projects",String.join("\n",application.cvSummary().projects())));
+        }
         String snapshot;
         try { snapshot=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(json.writeValueAsString(Arrays.asList(id,job.id(),job.requirements(),sources)).getBytes(StandardCharsets.UTF_8))); }
         catch(Exception e){throw new IllegalStateException("Could not identify evidence revision",e);}

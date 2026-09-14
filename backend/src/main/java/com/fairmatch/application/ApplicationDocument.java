@@ -2,6 +2,7 @@ package com.fairmatch.application;
 
 import java.time.Instant;
 import java.util.List;
+import com.fairmatch.platform.PlatformService;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -13,5 +14,5 @@ import org.springframework.data.mongodb.core.index.CompoundIndex;
 record ApplicationDocument(@Id String id, String organizationId, String jobId, String name, String normalizedContact,
                            String role, String experience, String education, List<String> skills, String example,
                            String availability, String location, String stage, String band, String consentVersion,
-                           Instant appliedAt, String stageReason, Instant stageChangedAt, String ownerId) {
+                           Instant appliedAt, String stageReason, Instant stageChangedAt, String ownerId,PlatformService.CvSummary cvSummary) {
 }

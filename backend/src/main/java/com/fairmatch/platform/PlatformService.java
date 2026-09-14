@@ -183,10 +183,15 @@ public class PlatformService implements UserDetailsService {
             throw new ApiException(HttpStatus.NOT_FOUND,"Notification not found.");
     }
     public Profile profile(String ownerId) {
-        var p=mongo.findById(ownerId,Profile.class);return p==null?new Profile(ownerId,"","","",List.of(),null):p;
+        var p=mongo.findById(ownerId,Profile.class);return p==null?new Profile(ownerId,"","","",List.of(),null,null):p;
     }
     public Profile saveProfile(String ownerId,ProfileInput r) {
-        return mongo.save(new Profile(ownerId,r.role().trim(),r.experience().trim(),r.education().trim(),r.skills().stream().map(String::trim).filter(s->!s.isEmpty()).distinct().toList(),Instant.now()));
+        var existing=profile(ownerId);
+        return mongo.save(new Profile(ownerId,r.role().trim(),r.experience().trim(),r.education().trim(),r.skills().stream().map(String::trim).filter(s->!s.isEmpty()).distinct().toList(),Instant.now(),existing.cvSummary()));
+    }
+    public Profile saveConfirmedCvProfile(String ownerId,ProfileInput r,CvSummary summary) {
+        var saved=saveProfile(ownerId,r);
+        return mongo.save(new Profile(saved.id(),saved.role(),saved.experience(),saved.education(),saved.skills(),saved.updatedAt(),summary));
     }
     public Draft draft(String ownerId,String jobId) {
         var d=mongo.findById(ownerId+":"+jobId,Draft.class);return d==null?new Draft(ownerId+":"+jobId,ownerId,jobId,Map.of(),null):d;
@@ -237,7 +242,8 @@ public class PlatformService implements UserDetailsService {
     @Document("organization_owners") public record Ownership(@Id String id,String ownerId){}
     public record Member(String id,String name,String email,String role,String status){}
     @Document("notifications") public record Notification(@Id String id,@Indexed String ownerId,String title,String message,String reference,Instant createdAt,boolean read){}
-    @Document("profiles") public record Profile(@Id String id,String role,String experience,String education,List<String> skills,Instant updatedAt){}
+    @Document("profiles") public record Profile(@Id String id,String role,String experience,String education,List<String> skills,Instant updatedAt,CvSummary cvSummary){}
+    public record CvSummary(List<String> skills,List<String> courses,List<String> projects,Instant confirmedAt){}
     public record ProfileInput(@NotNull @Size(max=160) String role,@NotNull @Size(max=6000) String experience,@NotNull @Size(max=1000) String education,@NotNull @Size(max=30) List<@NotBlank @Size(max=100) String> skills){}
     @Document("application_drafts") public record Draft(@Id String id,@Indexed String ownerId,String jobId,Map<String,Object> values,Instant updatedAt){}
     @Document("support_cases") public record SupportCase(@Id String id,@Indexed String ownerId,String subject,String category,String reference,String priority,String status,String detail,String response,Instant createdAt,long version){}

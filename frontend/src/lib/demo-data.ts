@@ -31,6 +31,7 @@ export type Candidate = {
   location?: string;
   stageReason?: string;
   stageChangedAt?: string;
+  cvSummary?: { skills: string[]; courses: string[]; projects: string[]; confirmedAt: string } | null;
 };
 export type AuditEvent = {
   id: string;

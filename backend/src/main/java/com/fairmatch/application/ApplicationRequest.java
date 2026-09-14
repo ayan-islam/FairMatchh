@@ -16,6 +16,7 @@ public record ApplicationRequest(
         @NotBlank @Size(max = 200) String location,
         @AssertTrue boolean consent,
         @AssertTrue boolean evidenceConfirmed,
-        @AssertTrue boolean finalConsent
+        @AssertTrue boolean finalConsent,
+        boolean shareCvSummary
 ) {
 }

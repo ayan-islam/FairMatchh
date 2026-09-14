@@ -37,7 +37,7 @@ class RankingController {
     @Document("ranking_rubrics") record Rubric(@Id String id,String organizationId,String snapshot,List<String> requirements,List<Criterion> criteria,long version,String reason,String actor,Instant at) {}
     @Document("ranking_rubric_history") record RubricHistory(@Id String id,Rubric rubric) {}
     record Item(@Min(0) int index,@Min(0) @Max(4) Integer rating,
-        @NotNull @Pattern(regexp="experience|education|skills|example|none|reply:[a-f0-9-]+") String source,
+        @NotNull @Pattern(regexp="experience|education|skills|example|cv_skills|cv_courses|cv_projects|none|reply:[a-f0-9-]+") String source,
         @NotNull @Size(max=1000) String quote,@NotNull @Size(max=1500) String reason) {}
     record ReviewInput(@NotBlank String snapshot,@Min(0) long expectedVersion,
         @NotEmpty @Size(max=30) List<@NotNull @Valid Item> items,@AssertTrue boolean confirmed) {}
@@ -63,6 +63,11 @@ class RankingController {
     }
     private List<Source> sources(ApplicationDocument a){
         var sources=new ArrayList<>(List.of(new Source("experience",a.experience()),new Source("education",a.education()),new Source("skills",String.join(", ",a.skills())),new Source("example",a.example())));
+        if(a.cvSummary()!=null){
+            sources.add(new Source("cv_skills",String.join(", ",a.cvSummary().skills())));
+            sources.add(new Source("cv_courses",String.join("\n",a.cvSummary().courses())));
+            sources.add(new Source("cv_projects",String.join("\n",a.cvSummary().projects())));
+        }
         mongo.find(Query.query(Criteria.where("applicationId").is(a.id()).and("organizationId").is(a.organizationId()).and("sender").is("Candidate")).with(Sort.by(Sort.Direction.DESC,"at","_id")).limit(20),ApplicationService.ConversationMessage.class)
             .forEach(m->sources.add(new Source("reply:"+m.id(),m.message())));
         return sources;

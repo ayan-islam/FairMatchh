@@ -32,6 +32,16 @@ class ExtractionTests(unittest.TestCase):
         for item in result:
             self.assertEqual(item["value"], text[item["start"]:item["end"]])
 
+    def test_courses_and_projects_are_page_linked_suggestions(self):
+        text = "Skills\nPython, SQL\nRelevant Coursework\nDatabase Systems\nProjects\nBuilt a reporting dashboard\nContact\nprivate@example.test\n"
+        result = suggestions([self.page(text, 3)])
+        self.assertEqual([s["field"] for s in result], ["skills", "courses", "projects"])
+        self.assertEqual([s["value"] for s in result], ["Python, SQL", "Database Systems", "Built a reporting dashboard"])
+        for item in result:
+            self.assertEqual(item["page"], 3)
+            self.assertEqual(item["value"], text[item["start"]:item["end"]])
+            self.assertNotIn("private@example.test", item["value"])
+
     def test_page_boundaries_and_field_limits_are_explicit(self):
         result = suggestions([self.page("Education\n"+"A"*1500), self.page("This page has no section heading", 2)])
         self.assertEqual(len(result), 1)

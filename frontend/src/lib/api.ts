@@ -1,6 +1,6 @@
 import type { Candidate, Job, Stage, AuditEvent, Interview } from "./demo-data";
 export type InterviewInput = Pick<Interview, "candidateId" | "date" | "time" | "format" | "location">;
-export type ApplicationInput = { name: string; contact: string; role: string; experience: string; education: string; skills: string[]; example: string; availability: string; location: string; consent: boolean; evidenceConfirmed: boolean; finalConsent: boolean; };
+export type ApplicationInput = { name: string; contact: string; role: string; experience: string; education: string; skills: string[]; example: string; availability: string; location: string; consent: boolean; evidenceConfirmed: boolean; finalConsent: boolean; shareCvSummary?: boolean; };
 export type Receipt = { id: string; jobId: string; status: string; submittedAt: string };
 export const AUTH_KEY = "fairmatch.employer.auth";
 export async function request<T>(path: string, method = "GET", body?: unknown, auth?: string): Promise<T> {
