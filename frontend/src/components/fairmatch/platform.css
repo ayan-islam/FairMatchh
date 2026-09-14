@@ -1,6 +1,13 @@
 .fs-business-document { border: 1px solid #d6e4e5; border-radius: 8px; padding: 16px; display: grid; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
 .fs-business-document .fs-actions { flex-wrap: wrap; }
 .fs-business-document button { max-width: 100%; height: auto; min-height: 36px; white-space: normal; text-align: left; }
+.fs-document-preview { display: grid; gap: 10px; min-width: 0; }
+.fs-document-preview-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.fs-document-preview-reader { display: grid; gap: 10px; min-width: 0; }
+.fs-document-preview-controls { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px; }
+.fs-document-preview-controls button { margin: 0; }
+.fs-document-preview-pages { max-height: min(65vh, 600px); min-height: 300px; overflow: auto; padding: 12px; border: 1px solid #d6e4e5; border-radius: 8px; background: #f3f7f7; text-align: center; }
+.fs-document-preview-pages canvas { display: block; margin: 0 auto; background: #fff; box-shadow: 0 2px 10px rgb(11 33 67 / 12%); }
 .fs-workspace {
   max-width: 1240px;
   margin: 0 auto;

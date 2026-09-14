@@ -55,7 +55,7 @@ public class OrganizationEvidenceService {
         tx.executeWithoutResult(status->{owned(org,id);changed(org,version);mongo.remove(Query.query(Criteria.where("_id").is(id).and("organizationId").is(org)),Evidence.class);mongo.save(new Deletion(id,Instant.now()));audit.record(org,"ORGANIZATION_DOCUMENT_REMOVED",id,"Private file deletion queued; verification requires another review",actor);});
         cleanup();
     }
-    public byte[] download(String org,String id,String actor){var record=owned(org,id);var bytes=files.request(record.id(),"GET",null);audit.record(org,"ORGANIZATION_DOCUMENT_ACCESSED",id,"Private supporting PDF downloaded",actor);return bytes;}
+    public byte[] download(String org,String id,String actor){var record=owned(org,id);var bytes=files.request(record.id(),"GET",null);audit.record(org,"ORGANIZATION_DOCUMENT_ACCESSED",id,"Private supporting PDF accessed",actor);return bytes;}
     public void recordReview(String org,long version,String status,String reason,List<String> reviewedIds,String actor){
         var documents=list(org);
         if(status.equals("Verified")) {

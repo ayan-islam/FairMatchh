@@ -22,11 +22,15 @@ Read **PROJECT_DEMONSTRATION_GUIDE.md** for the current presentation script, arc
 
 JWT sign-in and roles; organization registration/settings/review; academic department and related position selection; job draft/publish/edit/close; candidate profiles and saved application drafts; consent-based submissions and duplicate checks; candidate application history and withdrawal; blind employer responses; human evidence-band reviews; recorded hiring stages; supporting-information conversations; interviews and evaluations; in-app notifications; admin support/appeal cases; fairness process checks; saved audit and real-data CSV reports; private PDF upload, text extraction, candidate confirmation, download and deletion.
 
+In **Admin > Organizations > Review organization**, choose **View in browser** to read a private supporting PDF in the review dialog, move between pages and zoom. A download is optional. After viewing, explicitly check that you reviewed the document before approving the organization.
+
 Text PDFs are supported up to 8 MB and 10 pages, with page-linked source highlights and editable suggestions from explicit section headings. Refresh extraction upgrades an older CV without uploading it again or changing the confirmed profile. English/Bangla scanned-page OCR now runs locally, with an explicit Read with OCR retry and warnings for uncertain reading. See OCR_SETUP_AND_CODE_GUIDE.md. The original PDF is private in MinIO; a candidate must review and confirm extracted information. No automatic hiring decisions are made.
 
 ## Stack and data
 
 Java 21, Spring Boot 3.5.16, Spring Modulith 1.4.13, Maven, Spring Security JWT, Spring Data MongoDB 8 replica set; Next.js 16, React 19, TypeScript, Tailwind 4 and Radix/shadcn components; Python 3.12, FastAPI, pypdf, pypdfium2, Tesseract English/Bangla OCR and local MinIO.
+
+The frontend build uses Node.js 22.13+ (Node.js 24 on this laptop). PDF.js renders private business PDFs inside the browser; its matching worker and license are in `frontend/public`.
 
 Keep the entire **data** folder: MongoDB records, MinIO objects and local signing/service keys live there. Do not delete it to restart. Existing jobs and anonymous applications are preserved. Old anonymous applications are not automatically assigned to new accounts based on an unverified email address.
 
