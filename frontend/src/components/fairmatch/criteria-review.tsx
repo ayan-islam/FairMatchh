@@ -40,21 +40,21 @@ export function CriteriaReviewDialog({candidate,auth,onClose,onSaved}:{candidate
         {!report.criteria.length&&<p>This job has no requirements to assess. Add job-related requirements before reviewing.</p>}
         {items.map(item=><section className="fs-source fs-criterion" key={item.index}>
           <h3>{item.index+1}. {report.criteria[item.index]}</h3>
-          <Field label={`Assessment for requirement ${item.index+1}`}><select value={item.assessment} disabled={busy} onChange={e=>edit(item.index,{assessment:e.target.value as Item["assessment"],...(e.target.value!=="Needs evidence"&&item.source==="none"?{source:"experience"}:{})})}>
+          <Field label={`Assessment for requirement ${item.index+1}`}><select required value={item.assessment} disabled={busy} onChange={e=>edit(item.index,{assessment:e.target.value as Item["assessment"],...(e.target.value!=="Needs evidence"&&item.source==="none"?{source:"experience"}:{})})}>
             <option>Supported</option><option>Partial</option><option>Needs evidence</option>
           </select></Field>
-          <Field label={`Source for requirement ${item.index+1}`}><select value={item.source} disabled={busy} onChange={e=>edit(item.index,{source:e.target.value,quote:""})}>
+          <Field label={`Source for requirement ${item.index+1}`}><select required value={item.source} disabled={busy} onChange={e=>edit(item.index,{source:e.target.value,quote:""})}>
             <option value="none" disabled={item.assessment!=="Needs evidence"}>No supporting passage found</option>
             {report.sources.map(source=><option value={source.field} key={source.field}>{fieldNames[source.field]}</option>)}
           </select></Field>
           {item.source!=="none"&&<>
             <details className="fs-source" open><summary>Submitted {fieldNames[item.source]?.toLowerCase()}</summary><pre>{report.sources.find(s=>s.field===item.source)?.text || "This submitted field is empty."}</pre></details>
-            <Field label={`Exact supporting passage for requirement ${item.index+1}`}><Textarea disabled={busy} value={item.quote} maxLength={1000} onChange={e=>edit(item.index,{quote:e.target.value})} placeholder="Copy an exact passage from the submitted field above." /></Field>
+            <Field label={`Exact supporting passage for requirement ${item.index+1}`}><Textarea required minLength={3} disabled={busy} value={item.quote} maxLength={1000} onChange={e=>edit(item.index,{quote:e.target.value})} placeholder="Copy an exact passage from the submitted field above." /></Field>
           </>}
-          <Field label={`Reason for requirement ${item.index+1}`}><Textarea disabled={busy} value={item.reason} minLength={15} maxLength={1500} onChange={e=>edit(item.index,{reason:e.target.value})} placeholder="Explain the evidence, its limits and any clarification needed." /></Field>
+          <Field label={`Reason for requirement ${item.index+1}`}><Textarea required disabled={busy} value={item.reason} minLength={15} maxLength={1500} onChange={e=>edit(item.index,{reason:e.target.value})} placeholder="Explain the evidence, its limits and any clarification needed." /></Field>
         </section>)}
         {!!items.length&&<><p>Unsaved summary: <StatusBadge>{summary}</StatusBadge> · {supported} supported, {partial} partial, {items.length-supported-partial} need evidence.</p>
-          <label><input type="checkbox" checked={confirmed} disabled={busy} onChange={e=>setConfirmed(e.target.checked)} /> I reviewed every requirement and checked the quoted evidence.</label></>}
+          <label><input required type="checkbox" checked={confirmed} disabled={busy} onChange={e=>setConfirmed(e.target.checked)} /> I reviewed every requirement and checked the quoted evidence.<b className="fm-required" aria-hidden="true">*</b></label></>}
       </>}
     </div>
     <div className="fs-actions">

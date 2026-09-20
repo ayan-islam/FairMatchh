@@ -35,8 +35,9 @@ export function ReviewDialog({
             {candidate.id} · A human review against the job requirements.
           </DialogDescription>
         </DialogHeader>
-        <Field label="Evidence band">
+        <Field label="Evidence band" required>
           <select
+            required
             value={band}
             onChange={(e) => setBand(e.target.value as Candidate["band"])}
           >
@@ -47,6 +48,8 @@ export function ReviewDialog({
         </Field>
         <Field label="Evidence and reasoning">
           <Textarea
+            required
+            minLength={20}
             maxLength={2000}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
@@ -123,8 +126,9 @@ export function GovernancePanel({ auth, jobs }: { auth: string; jobs: Job[] }) {
         title="Fairness process review"
         description="Check the hiring process using saved job and application records."
       />
-      <Field label="Job">
+      <Field label="Job" required>
         <select
+          required
           value={job}
           onChange={(e) => {
             setReport(undefined);
@@ -181,6 +185,8 @@ export function GovernancePanel({ auth, jobs }: { auth: string; jobs: Job[] }) {
             )}
             <Field label="Observations and follow-up actions">
               <Textarea
+                required
+                minLength={20}
                 value={reason}
                 maxLength={2000}
                 onChange={(e) => setReason(e.target.value)}
@@ -188,11 +194,12 @@ export function GovernancePanel({ auth, jobs }: { auth: string; jobs: Job[] }) {
             </Field>
             <label>
               <input
+                required
                 type="checkbox"
                 checked={confirmed}
                 onChange={(e) => setConfirmed(e.target.checked)}
               />{" "}
-              I reviewed the criteria and recorded any unresolved issues.
+              I reviewed the criteria and recorded any unresolved issues.<b className="fm-required" aria-hidden="true">*</b>
             </label>
             <div className="fs-actions">
               <Button

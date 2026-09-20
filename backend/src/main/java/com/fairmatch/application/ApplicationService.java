@@ -47,6 +47,7 @@ public class ApplicationService {
         if(r.shareCvSummary()&&!hasCvHighlights(cvSummary))throw new ApiException(HttpStatus.BAD_REQUEST,"Confirm your CV highlights in Documents before sharing them with this employer.");
         var a = applications.insert(new ApplicationDocument("FM-" + UUID.randomUUID(), organization, jobId, r.name().trim(), contact, r.role().trim(), r.experience().trim(), r.education().trim(), r.skills().stream().map(String::trim).distinct().toList(), r.example().trim(), r.availability(), r.location(), "New", "Needs review", "2026-09-v1", Instant.now(), null, null,ownerId,cvSummary));
         jobs.countApplication(jobId);
+        if(ownerId!=null)mongo.remove(Query.query(Criteria.where("_id").is(ownerId+":"+jobId).and("ownerId").is(ownerId)),"application_drafts");
         audit.record(organization, "APPLICATION_SUBMITTED", a.id());
         platform.notify(ownerId,"Application submitted","Your application was saved and is ready for employer review.",a.id());
         platform.notifyOrganization(organization,"New application","A new application is ready for evidence review.",a.id());
@@ -92,7 +93,7 @@ public class ApplicationService {
         applications.findByIdAndOrganizationId(id,organizationId).ifPresent(a->platform.notify(a.ownerId(),title,message,id));
     }
     public List<CandidateApplication> owned(String ownerId) {
-        return applications.findByOwnerIdOrderByAppliedAtDesc(ownerId).stream().map(a->new CandidateApplication(a.id(),a.jobId(),a.stage(),a.appliedAt(),a.role(),a.experience(),a.education(),a.skills(),a.example(),jobs.applicationJobTitle(a.organizationId(),a.jobId()),a.cvSummary()!=null)).toList();
+        return applications.findByOwnerIdOrderByAppliedAtDesc(ownerId).stream().map(a->new CandidateApplication(a.id(),a.jobId(),a.stage(),a.appliedAt(),a.role(),a.experience(),a.education(),a.skills(),a.example(),jobs.applicationJobTitle(a.organizationId(),a.jobId()),a.cvSummary()!=null,a.stageReason(),a.stageChangedAt())).toList();
     }
     private boolean hasCvHighlights(com.fairmatch.platform.PlatformService.CvSummary summary) {
         return summary!=null&&summary.confirmedAt()!=null&&(
@@ -176,7 +177,7 @@ public class ApplicationService {
     }
     @org.springframework.data.mongodb.core.mapping.Document("application_messages")
     public record ConversationMessage(@org.springframework.data.annotation.Id String id,String organizationId,String applicationId,String sender,String message,Instant at){}
-    public record CandidateApplication(String id,String jobId,String stage,Instant appliedAt,String role,String experience,String education,List<String> skills,String example,String jobTitle,boolean cvHighlightsShared){}
+    public record CandidateApplication(String id,String jobId,String stage,Instant appliedAt,String role,String experience,String education,List<String> skills,String example,String jobTitle,boolean cvHighlightsShared,String stageReason,Instant stageChangedAt){}
     public record ReviewRequest(@jakarta.validation.constraints.Pattern(regexp="Strong evidence|Consider|Needs review") @jakarta.validation.constraints.NotNull String band,
         @jakarta.validation.constraints.NotBlank String expectedBand,@jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max=2000) String reason){}
 

@@ -309,6 +309,131 @@
   padding: 20px;
   min-width: 0;
 }
+
+.fm-required {
+  color: #c3352b;
+  margin-left: 4px;
+  font-style: normal;
+}
+
+.fm-optional {
+  color: #718096;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 500;
+  margin-left: 8px;
+}
+
+.fm-field-rule {
+  color: #64748b;
+}
+
+.fm-field-rule--invalid {
+  color: #b42318 !important;
+  font-weight: 600;
+}
+
+.fs-draft-notice {
+  align-items: flex-start;
+  background: #eff8f6;
+  border: 1px solid #b9ded6;
+  border-radius: 10px;
+  color: #285e55;
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.fs-draft-notice strong,
+.fs-draft-notice span {
+  display: block;
+}
+
+.fs-application-tracker {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(78px, 1fr));
+  list-style: none;
+  margin: 18px 0;
+  padding: 0;
+}
+
+.fs-application-tracker li {
+  color: #718096;
+  font-size: 12px;
+  font-weight: 600;
+  padding-top: 24px;
+  position: relative;
+  text-align: center;
+}
+
+.fs-application-tracker li::before {
+  background: #dce5e8;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #b9c8ce;
+  content: "";
+  height: 14px;
+  left: calc(50% - 7px);
+  position: absolute;
+  top: 1px;
+  width: 14px;
+  z-index: 2;
+}
+
+.fs-application-tracker li::after {
+  background: #dce5e8;
+  content: "";
+  height: 2px;
+  left: -50%;
+  position: absolute;
+  top: 7px;
+  width: 100%;
+}
+
+.fs-application-tracker li:first-child::after {
+  display: none;
+}
+
+.fs-application-tracker li.is-complete,
+.fs-application-tracker li.is-current {
+  color: #006f65;
+}
+
+.fs-application-tracker li.is-complete::before,
+.fs-application-tracker li.is-current::before,
+.fs-application-tracker li.is-complete::after,
+.fs-application-tracker li.is-current::after {
+  background: #008c7f;
+}
+
+.fs-application-tracker li.is-current::before {
+  box-shadow: 0 0 0 4px #d8f1ec;
+}
+
+.fs-stage-note {
+  background: #f6f8f9;
+  border-left: 3px solid #008c7f;
+  border-radius: 4px;
+  padding: 10px 12px;
+}
+
+@media (max-width: 640px) {
+  .fs-application-tracker {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .fs-application-tracker li {
+    padding: 2px 0 2px 26px;
+    text-align: left;
+  }
+  .fs-application-tracker li::before {
+    left: 2px;
+    top: 3px;
+  }
+  .fs-application-tracker li::after {
+    display: none;
+  }
+}
 .fs-team-code { background: #eef8f5; }
 .fs-team-code input { font-family: monospace; }
 .fs-team-invitation { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid #d8e5e7; }

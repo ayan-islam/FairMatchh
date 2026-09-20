@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { Children, isValidElement, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Search, ArrowUpRight, Inbox } from "lucide-react";
@@ -163,17 +163,59 @@ export function Field({
   children,
   error,
   hint,
+  required,
+  optional,
 }: {
   label: string;
   children: ReactNode;
   error?: string;
   hint?: string;
+  required?: boolean;
+  optional?: boolean;
 }) {
+  const control = Children.toArray(children).find(isValidElement);
+  const controlProps = (control?.props || {}) as {
+    required?: boolean;
+    minLength?: number;
+    maxLength?: number;
+    value?: unknown;
+  };
+  const isRequired = required ?? !!controlProps.required;
+  const valueLength =
+    typeof controlProps.value === "string" ? controlProps.value.length : null;
+  const tooShort =
+    valueLength !== null &&
+    valueLength > 0 &&
+    typeof controlProps.minLength === "number" &&
+    valueLength < controlProps.minLength;
+  const lengthRule =
+    typeof controlProps.minLength === "number" &&
+    typeof controlProps.maxLength === "number"
+      ? `${controlProps.minLength}–${controlProps.maxLength} characters`
+      : typeof controlProps.minLength === "number"
+        ? `At least ${controlProps.minLength} characters`
+        : typeof controlProps.maxLength === "number"
+          ? `Up to ${controlProps.maxLength} characters`
+          : "";
   return (
     <label className="fm-field">
-      <span>{label}</span>
+      <span>
+        {label}
+        {isRequired && (
+          <b className="fm-required" aria-hidden="true">
+            *
+          </b>
+        )}
+        {optional && !isRequired && <em className="fm-optional">Optional</em>}
+      </span>
       {children}
       {hint && <small>{hint}</small>}
+      {!error && lengthRule && (
+        <small className={tooShort ? "fm-field-rule fm-field-rule--invalid" : "fm-field-rule"}>
+          {lengthRule}
+          {valueLength !== null ? ` · ${valueLength} entered` : ""}
+        </small>
+      )}
       {error && (
         <small className="fm-error" role="alert">
           {error}

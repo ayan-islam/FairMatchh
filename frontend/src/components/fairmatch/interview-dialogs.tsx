@@ -43,22 +43,22 @@ export function ScheduleDialog({ candidates, jobs, interview, initialCandidateId
         <DialogDescription>Times use Asia/Dhaka. Candidate accounts receive an in-app update. Email and SMS are not connected; share details manually with legacy applicants.</DialogDescription></DialogHeader>
       <div className="fm-dialog-body">
         <fieldset disabled={saving} className="fm-interview-form">
-          <Field label="Candidate">
-            <select value={candidateId} disabled={!!interview} onChange={e => setCandidateId(e.target.value)}>
+          <Field label="Candidate" required>
+            <select required value={candidateId} disabled={!!interview} onChange={e => setCandidateId(e.target.value)}>
               <option value="" disabled>Select an application</option>
               {candidates.map(c => <option key={c.id} value={c.id}>{c.id} - {jobs.find(j => j.id === c.jobId)?.title || "Application"}</option>)}
             </select>
           </Field>
           {!candidates.length && <p role="status">No eligible applications yet. Candidates with final hiring decisions cannot be scheduled.</p>}
           <div className="fm-form-grid">
-            <Field label="Date"><Input type="date" min={dhakaDate(new Date())} value={date} onChange={e => setDate(e.target.value)} /></Field>
-            <Field label="Time (Asia/Dhaka)"><Input type="time" value={time} onChange={e => setTime(e.target.value)} /></Field>
+            <Field label="Date"><Input required type="date" min={dhakaDate(new Date())} value={date} onChange={e => setDate(e.target.value)} /></Field>
+            <Field label="Time (Asia/Dhaka)"><Input required type="time" value={time} onChange={e => setTime(e.target.value)} /></Field>
           </div>
-          <Field label="Format"><select value={format} onChange={e => setFormat(e.target.value)}>
+          <Field label="Format" required><select required value={format} onChange={e => setFormat(e.target.value)}>
             <option>Video interview</option><option>On-site interview</option><option>Phone interview</option>
           </select></Field>
           <Field label="Meeting details" hint={format === "Video interview" ? "Meeting link and joining instructions." : format === "On-site interview" ? "Office address and arrival instructions." : "Phone arrangements and calling instructions."}>
-            <Textarea maxLength={500} value={location} onChange={e => setLocation(e.target.value)} />
+            <Textarea required maxLength={500} value={location} onChange={e => setLocation(e.target.value)} />
           </Field>
         </fieldset>
         {error && <p className="fm-error" role="alert">{error}</p>}
@@ -104,7 +104,7 @@ export function RubricDialog({ interview, onClose, onSave }: CloseProps & {
                   className={scores[i] === n ? "selected" : ""} onClick={() => setScores(scores.map((s, index) => index === i ? n : s))}>{n}</button>)}
               </div></div>
           </div>)}
-          <Field label="Evidence notes"><Textarea maxLength={5000} rows={3} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Record specific examples from the interview." /></Field>
+          <Field label="Evidence notes"><Textarea required minLength={15} maxLength={5000} rows={3} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Record specific examples from the interview." /></Field>
         </fieldset>
         {error && <p className="fm-error" role="alert">{error}</p>}
       </div>
@@ -128,7 +128,7 @@ export function CancelInterviewDialog({ interview, onClose, onSave }: CloseProps
   }
   return <Dialog open onOpenChange={v => !v && !saving && onClose()}><DialogContent className="fm-dialog">
     <DialogHeader><DialogTitle>Cancel interview</DialogTitle><DialogDescription>{interview.candidateId} · {interview.date} at {interview.time} Asia/Dhaka. The record and reason will remain in the history.</DialogDescription></DialogHeader>
-    <Field label="Cancellation reason"><Textarea disabled={saving} maxLength={2000} value={reason} onChange={e => setReason(e.target.value)} /></Field>
+    <Field label="Cancellation reason"><Textarea required disabled={saving} minLength={15} maxLength={2000} value={reason} onChange={e => setReason(e.target.value)} /></Field>
     {error && <p className="fm-error" role="alert">{error}</p>}
     <DialogFooter><Button variant="outline" disabled={saving} onClick={onClose}>Keep interview</Button><Button variant="destructive" disabled={saving} onClick={save}>{saving ? "Saving..." : "Cancel interview"}</Button></DialogFooter>
   </DialogContent></Dialog>;

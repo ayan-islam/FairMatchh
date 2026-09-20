@@ -1,4 +1,16 @@
-# FairMatch - local fullstack application
+# FairMatch Full-stack Application
+
+## Sign-in model
+
+- **Candidates:** registration creates a unique 10-digit Candidate ID automatically. Candidates sign in with that ID and their password. The ID is shown in the candidate workspace.
+- **Employers:** owners and invited recruiters use a username that starts with a letter, plus their password.
+- **Administrators:** administrator usernames are provisioned by the platform owner; public administrator registration is disabled.
+
+Existing accounts created before this rule remain valid so saved project data is not locked out.
+
+## Application drafts and tracking
+
+Candidates can save an unfinished application as a draft. Opening the same job while signed in restores the saved fields and displays when the draft was last saved. A successful submission removes that job's draft. The **My applications** page shows the current milestone across Applied, Shortlisted, Interview, Offer and Hired, plus the latest job-related stage reason recorded by the employer.
 
 Open PowerShell in the project folder (the folder containing this README), then run:
 

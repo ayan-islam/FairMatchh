@@ -138,6 +138,7 @@ export function CandidateWorkspace({
           <p className="fm-eyebrow">CANDIDATE WORKSPACE</p>
           <h1>Hello, {user.name}</h1>
           <p>Your profile, applications and updates in one place.</p>
+          <p className="fm-muted">Candidate ID: <strong>{user.username}</strong></p>
         </div>
         <Button variant="outline" onClick={() => setRevision((r) => r + 1)}>
           Refresh my data
@@ -243,6 +244,13 @@ export function CandidateWorkspace({
                 <h2>{jobs.find((j) => j.id === a.jobId)?.title || a.jobTitle || a.role}</h2>
                 <p className="fs-reference">{a.id}</p>
                 <p>Submitted {new Date(a.appliedAt).toLocaleString("en-GB")}</p>
+                <ApplicationTracker stage={a.stage} />
+                {a.stageReason && (
+                  <p className="fs-stage-note">
+                    <strong>Latest update:</strong> {a.stageReason}
+                    {a.stageChangedAt ? ` · ${new Date(a.stageChangedAt).toLocaleString("en-GB")}` : ""}
+                  </p>
+                )}
                 <p>{a.experience}</p>
                 <p>{a.skills.join(" · ")}</p>
                 {a.cvHighlightsShared ? <p className="fm-muted">Compact CV highlights shared with this employer.</p> :
@@ -342,7 +350,7 @@ export function CandidateWorkspace({
               );
             }}
           >
-            <Field label="Current or recent position">
+            <Field label="Current or recent position" optional>
               <Input
                 maxLength={160}
                 value={profile.role}
@@ -351,7 +359,7 @@ export function CandidateWorkspace({
                 }
               />
             </Field>
-            <Field label="Experience">
+            <Field label="Experience" optional>
               <Textarea
                 maxLength={6000}
                 value={profile.experience}
@@ -360,7 +368,7 @@ export function CandidateWorkspace({
                 }
               />
             </Field>
-            <Field label="Education">
+            <Field label="Education" optional>
               <Input
                 maxLength={500}
                 value={profile.education}
@@ -369,7 +377,7 @@ export function CandidateWorkspace({
                 }
               />
             </Field>
-            <Field label="Skills (comma separated)">
+            <Field label="Skills (comma separated)" optional>
               <Input
                 value={profile.skills.join(",")}
                 onChange={(e) =>
@@ -490,6 +498,7 @@ export function CandidateWorkspace({
           <div className="fm-dialog-body fs-form">
             <Field label="Subject">
               <Input
+                required
                 maxLength={160}
                 value={caseForm.subject}
                 onChange={(e) =>
@@ -497,8 +506,9 @@ export function CandidateWorkspace({
                 }
               />
             </Field>
-            <Field label="Category">
+            <Field label="Category" required>
               <select
+                required
                 value={caseForm.category}
                 onChange={(e) =>
                   setCaseForm({ ...caseForm, category: e.target.value })
@@ -511,6 +521,8 @@ export function CandidateWorkspace({
             </Field>
             <Field label="Details">
               <Textarea
+                required
+                minLength={20}
                 maxLength={5000}
                 value={caseForm.detail}
                 onChange={(e) =>
@@ -569,6 +581,30 @@ export function CandidateWorkspace({
   );
 }
 
+const applicationStages = ["New", "Shortlisted", "Interview", "Offer", "Hired"] as const;
+
+function ApplicationTracker({ stage }: { stage: string }) {
+  const current = applicationStages.indexOf(stage as (typeof applicationStages)[number]);
+  const finalNegative = stage === "Not selected";
+  return (
+    <div aria-label={`Application progress: ${stage}`}>
+      <p className="fm-muted"><strong>Application progress</strong>{finalNegative ? " · Application closed" : ""}</p>
+      <ol className="fs-application-tracker">
+        {applicationStages.map((item, index) => (
+          <li
+            key={item}
+            className={current >= 0 && index < current ? "is-complete" : current === index ? "is-current" : ""}
+            aria-current={current === index ? "step" : undefined}
+          >
+            {item === "New" ? "Applied" : item}
+          </li>
+        ))}
+      </ol>
+      {finalNegative && <StatusBadge tone="danger">Not selected</StatusBadge>}
+    </div>
+  );
+}
+
 function ApplicationForm({
   job,
   profile,
@@ -602,12 +638,21 @@ function ApplicationForm({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [draftRestoredAt, setDraftRestoredAt] = useState<string | null>(null);
+  const [draftWasRestored, setDraftWasRestored] = useState(false);
   useEffect(() => {
     let cancelled = false;
     void platformApi
       .draft(job.id, auth)
       .then((d) => {
-        if (!cancelled) setForm((f) => ({ ...f, ...d.values }));
+        if (!cancelled) {
+          setForm((f) => ({ ...f, ...d.values }));
+          if (Object.keys(d.values || {}).length) {
+            setDraftRestoredAt(d.updatedAt || "saved earlier");
+            setDraftWasRestored(true);
+          }
+        }
       })
       .catch((e) => {
         if (!cancelled) setError(e.message);
@@ -623,6 +668,7 @@ function ApplicationForm({
     if (busy) return;
     setBusy(true);
     setError("");
+    setFieldErrors({});
     try {
       const {
         role,
@@ -647,11 +693,33 @@ function ApplicationForm({
           },
           auth,
         );
+        setDraftRestoredAt(new Date().toISOString());
+        setDraftWasRestored(false);
         toast.success("Draft saved. You can resume after signing in again.");
       } else {
+        const cleanSkills=skills.map((s) => s.trim()).filter(Boolean);
+        const nextErrors: Record<string, string> = {};
+        if (!role.trim()) nextErrors.role="Enter your current or recent position.";
+        if (experience.trim().length < 25) nextErrors.experience=`Enter at least 25 characters (${experience.trim().length} entered).`;
+        if (experience.length > 6000) nextErrors.experience="Work experience must be at most 6000 characters.";
+        if (education.length > 500) nextErrors.education="Education must be at most 500 characters.";
+        if (!cleanSkills.length) nextErrors.skills="Add at least one relevant skill.";
+        if (cleanSkills.length > 20) nextErrors.skills=`Add no more than 20 skills (${cleanSkills.length} entered).`;
+        if (cleanSkills.some((skill) => skill.length > 160)) nextErrors.skills="Each skill must be at most 160 characters.";
+        if (example.trim().length < 30) nextErrors.example=`Enter at least 30 characters (${example.trim().length} entered).`;
+        if (!availability.trim()) nextErrors.availability="Enter when you can start.";
+        if (!location.trim()) nextErrors.location="Enter your work location or arrangements.";
+        if (!form.consent) nextErrors.consent="Confirm that the application may be shared with the employer.";
+        if (!form.evidenceConfirmed) nextErrors.evidenceConfirmed="Confirm that you reviewed your experience and skills.";
+        if (!form.finalConsent) nextErrors.finalConsent="Confirm that the application is accurate and ready to submit.";
+        if (Object.keys(nextErrors).length) {
+          setFieldErrors(nextErrors);
+          setError("Please fix the highlighted fields before submitting. Your draft has not been lost.");
+          return;
+        }
         await platformApi.apply(
           job.id,
-          { ...form, skills: skills.map((s) => s.trim()).filter(Boolean) },
+          { ...form, skills: cleanSkills },
           auth,
         );
         toast.success("Application saved.");
@@ -683,6 +751,15 @@ function ApplicationForm({
             Submitting as {user.name} ({user.contact}). You can upload and
             confirm a CV in Documents before applying.
           </p>
+          {draftRestoredAt && (
+            <div className="fs-draft-notice" role="status">
+              <span aria-hidden="true">✓</span>
+              <div>
+                <strong>{draftWasRestored ? "Saved draft restored" : "Draft saved"}</strong>
+                <span>{draftWasRestored ? "You can continue where you left off. " : "You can safely close this form and continue later. "}Last saved {draftRestoredAt === "saved earlier" ? "earlier" : new Date(draftRestoredAt).toLocaleString("en-GB")}.</span>
+              </div>
+            </div>
+          )}
           {profile.cvSummary?.confirmedAt && (profile.cvSummary.skills?.length || profile.cvSummary.courses?.length || profile.cvSummary.projects?.length) ? <label className="fm-check-row">
             <input type="checkbox" checked={!!form.shareCvSummary} onChange={e=>setForm({...form,shareCvSummary:e.target.checked})}/>
             <span>Share my reviewed CV highlights (skills, courses and projects) with this employer. The original PDF remains private.</span>
@@ -699,12 +776,15 @@ function ApplicationForm({
           ).map((k) => (
             <Field
               key={k}
+              required={k !== "education"}
+              optional={k === "education"}
+              error={fieldErrors[k]}
               label={
                 {
                   role: "Current or recent position",
-                  experience: "Work experience (at least 25 characters)",
+                  experience: "Work experience",
                   education: "Education",
-                  example: "Specific work example (at least 30 characters)",
+                  example: "Specific work example",
                   availability: "Availability",
                   location: "Work location / arrangements",
                 }[k]
@@ -712,12 +792,15 @@ function ApplicationForm({
             >
               {["experience", "example"].includes(k) ? (
                 <Textarea
+                  required
+                  minLength={k === "experience" ? 25 : 30}
                   maxLength={6000}
                   value={form[k]}
                   onChange={(e) => setForm({ ...form, [k]: e.target.value })}
                 />
               ) : (
                 <Input
+                  required={k !== "education"}
                   maxLength={
                     k === "education"
                       ? 500
@@ -733,8 +816,9 @@ function ApplicationForm({
               )}
             </Field>
           ))}
-          <Field label="Skills (comma separated)">
+          <Field label="Skills (comma separated)" required error={fieldErrors.skills} hint="Add 1–20 job-relevant skills, separated by commas.">
             <Input
+              required
               value={form.skills.join(",")}
               onChange={(e) =>
                 setForm({ ...form, skills: e.target.value.split(",") })
@@ -745,6 +829,7 @@ function ApplicationForm({
             (k) => (
               <label className="fm-check-row" key={k}>
                 <input
+                  required
                   type="checkbox"
                   checked={form[k]}
                   onChange={(e) => setForm({ ...form, [k]: e.target.checked })}
@@ -760,7 +845,9 @@ function ApplicationForm({
                         "This application is accurate and ready to submit.",
                     }[k]
                   }
+                  <b className="fm-required" aria-hidden="true">*</b>
                 </span>
+                {fieldErrors[k] && <small className="fm-error" role="alert">{fieldErrors[k]}</small>}
               </label>
             ),
           )}

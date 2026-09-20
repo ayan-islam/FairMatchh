@@ -36,7 +36,7 @@ public class TeamService {
     public record AccessInput(@NotNull @Pattern(regexp="Active|Suspended") String status,@Min(0) long expectedVersion,
         @NotBlank @Size(min=15,max=1000) String reason) {}
     public record Acceptance(@NotBlank @Pattern(regexp="[A-Za-z0-9_-]{43}") String code,
-        @NotBlank @Email @Size(max=160) String email,@NotBlank @Pattern(regexp="[a-zA-Z0-9_.-]{3,60}") String username,
+        @NotBlank @Email @Size(max=160) String email,@NotBlank @Pattern(regexp="[a-zA-Z][a-zA-Z0-9_.-]{2,59}",message="Employer usernames must start with a letter and contain 3–60 letters, numbers, dots, underscores or hyphens.") String username,
         @NotBlank @Size(max=160) String name,@NotBlank @Size(min=10,max=72) String password) {}
     public record InviteView(String id,String email,String status,long version,Instant createdAt,Instant expiresAt) {}
     public record MemberView(String id,String name,String email,String role,String status,long version) {}

@@ -89,15 +89,16 @@ export function JobEditor({
   function next() {
     const e: Record<string, string> = {};
     if (step === 0) {
-      for (const k of [
-        "title",
-        "department",
-        "location",
-        "salary",
-        "description",
-        "closes",
-      ] as const)
-        if (!form[k].trim()) e[k] = "Please complete this field.";
+      const requiredMessages = {
+        title: "Choose a job position or enter a custom position.",
+        department: "Select an academic department or program.",
+        location: "Enter the job location.",
+        salary: "Enter a salary or salary range.",
+        description: "Describe the responsibilities and working conditions.",
+        closes: "Choose an application deadline.",
+      } as const;
+      for (const k of Object.keys(requiredMessages) as (keyof typeof requiredMessages)[])
+        if (!form[k].trim()) e[k] = requiredMessages[k];
       if (form.description.trim().length < 25)
         e.description = "Add at least 25 characters describing the role.";
     }
@@ -158,8 +159,9 @@ export function JobEditor({
         <div className="fm-dialog-body">
           {step === 0 && (
             <div className="fm-form-grid">
-              <Field label="Academic department / program" error={customDepartment ? undefined : errors.department} hint="Select the applicant's academic background, such as EEE, CSE, ICT or BBA.">
+              <Field label="Academic department / program" required error={customDepartment ? undefined : errors.department} hint="Required to publish. Select the applicant's academic background, such as EEE, CSE, ICT or BBA.">
                 <select
+                  required
                   autoFocus
                   value={customDepartment ? "__custom__" : form.department}
                   onChange={(e) => changeDepartment(e.target.value)}
@@ -169,8 +171,8 @@ export function JobEditor({
                   <option value="__custom__">Other academic department - specify</option>
                 </select>
               </Field>
-              <Field label="Job position" error={customPosition ? undefined : errors.title} hint={!departmentSelected ? "Select or enter an academic department first." : availablePositions.length ? "Positions related to your selected department. Choose custom if your role is not listed." : "Enter a custom position for this academic department."}>
-                <select disabled={!departmentSelected} value={customPosition ? "__custom__" : form.title} onChange={e => {
+              <Field label="Job position" required error={customPosition ? undefined : errors.title} hint={!departmentSelected ? "Required to publish. Select or enter an academic department first." : availablePositions.length ? "Required to publish. Positions related to your selected department. Choose custom if your role is not listed." : "Required to publish. Enter a custom position for this academic department."}>
+                <select required disabled={!departmentSelected} value={customPosition ? "__custom__" : form.title} onChange={e => {
                   const custom = e.target.value === "__custom__";
                   setCustomPosition(custom);
                   setPositionNotice("");
@@ -182,16 +184,19 @@ export function JobEditor({
                 </select>
               </Field>
               {positionNotice && <p className="fm-position-notice" role="status">{positionNotice}</p>}
-              {customDepartment && <Field label="Custom academic department / program" error={errors.department}><Input maxLength={120} value={form.department} onChange={e => update("department", e.target.value)} placeholder="e.g. Environmental Science" /></Field>}
-              {customPosition && <Field label="Custom job position" error={errors.title}><Input maxLength={160} value={form.title} onChange={e => update("title", e.target.value)} placeholder="e.g. Junior Automation Engineer" /></Field>}
-              <Field label="Location" error={errors.location}>
+              {customDepartment && <Field label="Custom academic department / program" error={errors.department}><Input required maxLength={120} value={form.department} onChange={e => update("department", e.target.value)} placeholder="e.g. Environmental Science" /></Field>}
+              {customPosition && <Field label="Custom job position" error={errors.title}><Input required maxLength={160} value={form.title} onChange={e => update("title", e.target.value)} placeholder="e.g. Junior Automation Engineer" /></Field>}
+              <Field label="Location" error={errors.location} hint="Required to publish.">
                 <Input
+                  required
+                  maxLength={160}
                   value={form.location}
                   onChange={(e) => update("location", e.target.value)}
                 />
               </Field>
-              <Field label="Workplace">
+              <Field label="Workplace" required>
                 <select
+                  required
                   value={form.workplace}
                   onChange={(e) => update("workplace", e.target.value)}
                 >
@@ -202,25 +207,32 @@ export function JobEditor({
               </Field>
               <Field
                 label="Salary range"
+                required
                 error={errors.salary}
                 hint="Transparency helps candidates decide whether to apply."
               >
                 <Input
+                  required
+                  maxLength={120}
                   value={form.salary}
                   onChange={(e) => update("salary", e.target.value)}
                   placeholder="BDT 28,000 – 38,000 monthly"
                 />
               </Field>
-              <Field label="Application deadline" error={errors.closes}>
+              <Field label="Application deadline" required error={errors.closes}>
                 <Input
+                  required
                   type="date"
                   value={form.closes}
                   onChange={(e) => update("closes", e.target.value)}
                 />
               </Field>
               <div className="fm-span-2">
-                <Field label="Job description" error={errors.description}>
+                <Field label="Job description" required error={errors.description} hint="Required to publish. Describe duties and working conditions.">
                   <Textarea
+                    required
+                    minLength={25}
+                    maxLength={6000}
                     rows={4}
                     value={form.description}
                     onChange={(e) => update("description", e.target.value)}
@@ -245,6 +257,7 @@ export function JobEditor({
                 </div>
               </div>
               <p className="fm-muted">For candidate ranking, save this job as a draft, then open Jobs → Ranking setup to define weights and rating descriptions before publishing.</p>
+              <p><strong>Job requirements<b className="fm-required" aria-hidden="true">*</b></strong> <span className="fm-muted">Add at least one requirement to publish.</span></p>
               <div className="fm-requirements">
                 {requirements.map((r, i) => (
                   <div key={i} className={biased.includes(r) ? "flagged" : ""}>
@@ -272,6 +285,7 @@ export function JobEditor({
               <div className="fm-inline-form">
                 <Input
                   aria-label="New requirement"
+                  maxLength={240}
                   value={requirement}
                   onChange={(e) => setRequirement(e.target.value)}
                   onKeyDown={(e) => {
@@ -334,6 +348,7 @@ export function JobEditor({
                 <span>
                   I confirm these requirements are job-related and applicants
                   will never be charged a fee.
+                  <b className="fm-required" aria-hidden="true">*</b>
                 </span>
               </label>
               {errors.confirmed && (
@@ -528,8 +543,9 @@ export function StageDialog({
             {candidate.id} · Current stage: {candidate.stage}
           </DialogDescription>
         </DialogHeader>
-        <Field label="New stage">
+        <Field label="New stage" required>
           <select
+            required
             value={stage}
             onChange={(e) => setStage(e.target.value as Stage)}
           >
@@ -553,6 +569,9 @@ export function StageDialog({
           error={error}
         >
           <Textarea
+            required
+            minLength={15}
+            maxLength={2000}
             autoFocus
             rows={4}
             value={reason}
@@ -617,6 +636,9 @@ export function RequestDialog({
         </DialogHeader>
         <Field label="Message to candidate" error={error}>
           <Textarea
+            required
+            minLength={20}
+            maxLength={2000}
             rows={5}
             value={message}
             onChange={(e) => setMessage(e.target.value)}

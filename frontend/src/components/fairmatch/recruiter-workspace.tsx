@@ -1286,7 +1286,7 @@ export function RecruiterWorkspace({
               )}
               {settingsTab === "Verification documents" && (canManageOrganization ? <OrganizationDocuments auth={auth} onLoaded={evidenceLoaded} /> : <Panel title="Business verification" description="Your organization owner manages the private supporting documents."><p>Current organization status: {organization.status}.</p></Panel>)}
               {settingsTab === "Team & access" && <TeamAccess auth={auth} />}
-              {settingsTab === "Billing" && <Panel title="Local classroom edition" description="Payments and subscriptions are not enabled. No payment is required to use this local build."><p>Payment integration remains part of the remaining project work.</p></Panel>}
+              {settingsTab === "Billing" && <Panel title="Subscription settings" description="FairMatch does not currently require a subscription for this organization."><p>No payment method is required.</p></Panel>}
               {settingsTab === "Data & privacy" && (
                 <Panel
                   title="Data controls"
@@ -1324,7 +1324,7 @@ export function RecruiterWorkspace({
           )}
           <footer className="fm-page-footer">
             <span>FairMatch · Evidence-led hiring</span>
-            <span>Jobs, applications, hiring stages & interviews saved in MongoDB</span>
+            <span>Jobs, applications, hiring stages and interviews are securely saved</span>
           </footer>
         </main>
       </div>
@@ -1405,7 +1405,7 @@ export function RecruiterWorkspace({
           <div className="fm-notice">
             <Link2 size={20} />
             <p>
-              This local demo link opens the candidate application experience.
+              Share this link with candidates. It opens this job’s application page directly.
             </p>
           </div>
           <Field label="Application link">

@@ -3,11 +3,15 @@ export type InterviewInput = Pick<Interview, "candidateId" | "date" | "time" | "
 export type ApplicationInput = { name: string; contact: string; role: string; experience: string; education: string; skills: string[]; example: string; availability: string; location: string; consent: boolean; evidenceConfirmed: boolean; finalConsent: boolean; shareCvSummary?: boolean; };
 export type Receipt = { id: string; jobId: string; status: string; submittedAt: string };
 export const AUTH_KEY = "fairmatch.employer.auth";
+function fieldLabel(value: string) {
+  const words = value.replace(/\[(\d+)\]/g, " item $1").replace(/([a-z])([A-Z])/g, "$1 $2").replaceAll(".", " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
 export async function request<T>(path: string, method = "GET", body?: unknown, auth?: string): Promise<T> {
   let response: Response;
   try { response = await fetch(`/api/${path}`, { method, cache: "no-store", signal: AbortSignal.timeout(15000), headers: { "Content-Type": "application/json", ...(auth ? { Authorization: auth.startsWith("Bearer ") ? auth : `Basic ${auth}` } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) }); }
   catch { throw new Error("Cannot reach the backend. Run START_FAIRMATCH.cmd and try again."); }
-  if (!response.ok) { const error = await response.json().catch(() => ({})); const details = error.fields ? Object.entries(error.fields).map(([field, message]) => `${field}: ${message}`).join("; ") : ""; throw new Error(response.status === 401 ? "Your session is missing or expired. Sign in again." : details || error.message || `Request failed (${response.status}). Please try again.`); }
+  if (!response.ok) { const error = await response.json().catch(() => ({})); const details = error.fields ? Object.entries(error.fields).map(([field, message]) => `${fieldLabel(field)}: ${String(message)}`).join("; ") : ""; throw new Error(response.status === 401 ? "Your session is missing or expired. Sign in again." : details || error.message || `Request failed (${response.status}). Please try again.`); }
   return response.json();
 }
 export const api = {

@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
 class AdminBootstrap {
     private final MongoTemplate mongo; private final PasswordEncoder passwords;
     private final AuditService audit; private final Validator validator; private final Input input;
-    record Input(@Pattern(regexp="[a-zA-Z0-9_.-]{3,60}") String username,
+    record Input(@Pattern(regexp="[a-zA-Z][a-zA-Z0-9_.-]{2,59}",message="Administrator usernames must start with a letter and contain 3–60 letters, numbers, dots, underscores or hyphens.") String username,
         @NotBlank @Email @Size(max=160) String contact,@NotBlank @Size(max=160) String name,
         @NotBlank @Size(min=10,max=72) String password) {}
     AdminBootstrap(MongoTemplate mongo,PasswordEncoder passwords,AuditService audit,Validator validator,

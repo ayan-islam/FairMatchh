@@ -110,7 +110,7 @@ export function OrganizationDocuments({ auth, adminOrgId, onLoaded, checkedIds =
         {removing === item.id && <div role="alert" className="fm-notice"><div><p>Remove this private file and require a new organization review? Historical decisions retain its description and checksum.</p><div className="fs-actions"><Button variant="outline" disabled={busy} onClick={() => setRemoving(undefined)}>Keep document</Button><Button disabled={busy} onClick={() => void remove(item.id)}>Confirm removal</Button></div></div></div>}
       </section>)}
       {!adminOrgId && <form className="fs-form" onSubmit={event => { event.preventDefault(); void upload(); }}>
-        <Field label="Supporting document type"><select value={type} onChange={event => setType(event.target.value)} disabled={busy}>{types.map(value => <option key={value}>{value}</option>)}</select></Field>
+        <Field label="Supporting document type"><select required value={type} onChange={event => setType(event.target.value)} disabled={busy}>{types.map(value => <option key={value}>{value}</option>)}</select></Field>
         <Field label="What does this document establish?"><Input required minLength={10} maxLength={500} value={description} disabled={busy} onChange={event => setDescription(event.target.value)} placeholder="For example, the registered business name and address" /></Field>
         <Field label="Business document PDF"><Input ref={fileInput} type="file" accept="application/pdf,.pdf" required disabled={busy} onChange={event => setFile(event.target.files?.[0])} /></Field>
         <Button type="submit" disabled={busy || !bundle || !file || bundle.documents.length >= 5}>{busy ? "Working…" : "Upload for verification"}</Button>

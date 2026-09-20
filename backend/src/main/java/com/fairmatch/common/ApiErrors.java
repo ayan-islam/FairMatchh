@@ -12,8 +12,19 @@ class ApiErrors {
   @ExceptionHandler(ApiException.class) ResponseEntity<?> business(ApiException e) { return ResponseEntity.status(e.status).body(Map.of("message",e.getMessage())); }
   @ExceptionHandler(MethodArgumentNotValidException.class) ResponseEntity<?> validation(MethodArgumentNotValidException e) {
     var fields=new java.util.LinkedHashMap<String,String>();
-    e.getBindingResult().getFieldErrors().forEach(f -> fields.putIfAbsent(f.getField(),f.getDefaultMessage()));
+    e.getBindingResult().getFieldErrors().forEach(f -> fields.putIfAbsent(f.getField(),clearMessage(f.getCode(),f.getDefaultMessage())));
     return ResponseEntity.badRequest().body(Map.of("message","Please correct the highlighted information.","fields",fields));
+  }
+  private String clearMessage(String code,String original) {
+    if(original!=null && !original.isBlank() && !original.startsWith("must ") && !original.startsWith("size "))return original;
+    return switch(code==null?"":code) {
+      case "NotBlank","NotEmpty","NotNull" -> "This field is required.";
+      case "AssertTrue" -> "This confirmation is required.";
+      case "Email" -> "Enter a valid email address.";
+      case "Pattern" -> "Enter a value in the required format.";
+      case "Size" -> original==null?"Enter text within the allowed length.":"Length "+original.replaceFirst("^size ","");
+      default -> original==null||original.isBlank()?"Enter a valid value.":Character.toUpperCase(original.charAt(0))+original.substring(1)+(original.endsWith(".")?"":".");
+    };
   }
   @ExceptionHandler(HttpMessageNotReadableException.class) ResponseEntity<?> malformed() { return ResponseEntity.badRequest().body(Map.of("message","The request contains invalid or unsupported fields.")); }
   @ExceptionHandler(DuplicateKeyException.class) ResponseEntity<?> duplicate() { return ResponseEntity.status(409).body(Map.of("message","This record already exists. Check for an existing application or interview at the same time.")); }

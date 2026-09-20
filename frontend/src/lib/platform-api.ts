@@ -47,6 +47,8 @@ export type OwnApplication = {
   skills: string[];
   example: string;
   cvHighlightsShared: boolean;
+  stageReason?: string | null;
+  stageChangedAt?: string | null;
 };
 export type Notice = {
   id: string;
@@ -86,7 +88,7 @@ export const platformApi = {
       password,
     }),
   register: (input: {
-    username: string;
+    username?: string;
     password: string;
     contact: string;
     name: string;
@@ -130,8 +132,7 @@ export const platformApi = {
   createCase: (input: CaseInput, auth: string) =>
     request<SupportCase>("account/cases", "POST", input, auth),
   profile: async (auth: string) => {
-    const {role,experience,education,skills}=await request<Profile>("candidate/profile", "GET", undefined, auth);
-    return {role,experience,education,skills};
+    return request<Profile>("candidate/profile", "GET", undefined, auth);
   },
   saveProfile: (input: Profile, auth: string) =>
     request<Profile>("candidate/profile", "PUT", {role:input.role,experience:input.experience,education:input.education,skills:input.skills}, auth),
@@ -145,7 +146,7 @@ export const platformApi = {
       auth,
     ),
   draft: (jobId: string, auth: string) =>
-    request<{ values: Partial<ApplicationInput> }>(
+    request<{ values: Partial<ApplicationInput>; updatedAt?: string | null }>(
       `candidate/drafts/${encodeURIComponent(jobId)}`,
       "GET",
       undefined,

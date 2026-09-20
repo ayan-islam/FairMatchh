@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** Shared identity, organization, inbox and support foundation. No hiring decisions live here. */
 @Service
 public class PlatformService implements UserDetailsService {
+    private static final java.security.SecureRandom LOGIN_IDS = new java.security.SecureRandom();
     private final MongoTemplate mongo;
     private final PasswordEncoder passwords;
     private final AuditService audit;
@@ -90,10 +91,21 @@ public class PlatformService implements UserDetailsService {
     }
     @Transactional public Account register(Registration r) {
         if(r.password().getBytes(java.nio.charset.StandardCharsets.UTF_8).length>72)bad("Password must be at most 72 UTF-8 bytes.");
-        var username=r.username().trim().toLowerCase(Locale.ROOT);var contact=r.contact().trim().toLowerCase(Locale.ROOT);
-        if(mongo.exists(Query.query(new Criteria().orOperator(Criteria.where("username").is(username),Criteria.where("contact").is(contact))),Account.class))
-            throw new ApiException(HttpStatus.CONFLICT,"This username or email already has an account.");
+        var contact=r.contact().trim().toLowerCase(Locale.ROOT);
+        if(mongo.exists(Query.query(Criteria.where("contact").is(contact)),Account.class))
+            throw new ApiException(HttpStatus.CONFLICT,"This email already has an account.");
         if(r.name().isBlank())bad("Enter your name.");
+        final String username;
+        if(r.role().equals("CANDIDATE")) {
+            username=nextCandidateId();
+        } else {
+            var requested=r.username()==null?"":r.username().trim().toLowerCase(Locale.ROOT);
+            if(!requested.matches("[a-z][a-z0-9._-]{2,59}"))
+                bad("Employer usernames must start with a letter and contain 3–60 letters, numbers, dots, underscores or hyphens.");
+            if(mongo.exists(Query.query(Criteria.where("username").is(requested)),Account.class))
+                throw new ApiException(HttpStatus.CONFLICT,"This username already has an account.");
+            username=requested;
+        }
         String org=null;
         if(r.role().equals("EMPLOYER")) {
             if(r.organizationName()==null||r.organizationName().trim().length()<2)bad("Enter your organization name.");
@@ -104,6 +116,13 @@ public class PlatformService implements UserDetailsService {
         if(org!=null)mongo.insert(new Ownership(org,account.id()));
         audit.record(org==null?"platform":org,"ACCOUNT_CREATED",account.id(),r.role(),username);
         return account;
+    }
+    private String nextCandidateId() {
+        for(int attempt=0;attempt<20;attempt++) {
+            var candidateId=String.format(Locale.ROOT,"%010d",1_000_000_000L+LOGIN_IDS.nextLong(9_000_000_000L));
+            if(!mongo.exists(Query.query(Criteria.where("username").is(candidateId)),Account.class))return candidateId;
+        }
+        throw new ApiException(HttpStatus.CONFLICT,"Could not create a unique candidate ID. Please try again.");
     }
     public Organization organization(String id) {
         var org=mongo.findById(id,Organization.class);if(org==null)throw new ApiException(HttpStatus.NOT_FOUND,"Organization not found.");return org;
@@ -233,7 +252,7 @@ public class PlatformService implements UserDetailsService {
         public UserView view(){return new UserView(id,username,contact,name,role,organizationId);}
     }
     public record UserView(String id,String username,String contact,String name,String role,String organizationId){}
-    public record Registration(@NotBlank @Pattern(regexp="[a-zA-Z0-9_.-]{3,60}") String username,@NotBlank @Email @Size(max=160) String contact,@NotBlank @Size(max=160) String name,@NotBlank @Size(min=10,max=72) String password,@Pattern(regexp="CANDIDATE|EMPLOYER") @NotNull String role,@Size(max=160) String organizationName){}
+    public record Registration(@Size(max=60) String username,@NotBlank(message="Email is required.") @Email(message="Enter a valid email address.") @Size(max=160,message="Email must be at most 160 characters.") String contact,@NotBlank(message="Name is required.") @Size(max=160,message="Name must be at most 160 characters.") String name,@NotBlank(message="Password is required.") @Size(min=10,max=72,message="Password must contain 10–72 characters.") String password,@Pattern(regexp="CANDIDATE|EMPLOYER",message="Choose candidate or employer registration.") @NotNull String role,@Size(max=160,message="Organization name must be at most 160 characters.") String organizationName){}
     @Document("organizations") public record Organization(@Id String id,String name,String industry,String location,String website,String contact,String status,String reviewReason,Instant submittedAt,long version,Boolean clearedFromAdmin){}
     public record OrganizationVerificationAction(@Min(0) long expectedVersion,@NotBlank @Size(min=20,max=2000) String reason){}
     public record OrganizationInput(@NotBlank @Size(max=160) String name,@NotNull @Size(max=160) String industry,@NotNull @Size(max=160) String location,@NotNull @Size(max=240) String website,@Min(0) long expectedVersion){}
