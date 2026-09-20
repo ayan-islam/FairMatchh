@@ -47,12 +47,10 @@ const emptyProfile: Profile = {
 export function CandidateWorkspace({
   auth,
   user,
-  jobs,
   requestedId,
 }: {
   auth: string;
   user: User;
-  jobs: Job[];
   requestedId: string | null;
 }) {
   const [conversation, setConversation] = useState<string | null>(null);
@@ -62,6 +60,7 @@ export function CandidateWorkspace({
   const [applications, setApplications] = useState<OwnApplication[]>([]);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [cases, setCases] = useState<SupportCase[]>([]);
+  const [visitedJobs, setVisitedJobs] = useState<Job[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [revision, setRevision] = useState(0);
@@ -78,6 +77,12 @@ export function CandidateWorkspace({
   });
   useEffect(() => {
     let cancelled = false;
+    const scopedJobs = (requestedId
+      ? platformApi.visitJob(requestedId, auth).then((job) => [job])
+      : platformApi.visitedJobs(auth)
+    )
+      .then((value) => ({ value, error: "" }))
+      .catch((e: Error) => ({ value: [] as Job[], error: e.message }));
     void Promise.all([
       platformApi.profile(auth),
       platformApi.applications(auth),
@@ -89,15 +94,17 @@ export function CandidateWorkspace({
         undefined,
         auth,
       ),
+      scopedJobs,
     ])
-      .then(([p, a, n, c, i]) => {
+      .then(([p, a, n, c, i, scoped]) => {
         if (!cancelled) {
           setProfile(p);
           setApplications(a);
           setNotices(n);
           setCases(c);
           setInterviews(i);
-          setError("");
+          setVisitedJobs(scoped.value);
+          setError(scoped.error);
         }
       })
       .catch((e) => {
@@ -106,7 +113,7 @@ export function CandidateWorkspace({
     return () => {
       cancelled = true;
     };
-  }, [auth, revision]);
+  }, [auth, requestedId, revision]);
   async function run(action: () => Promise<unknown>, message: string) {
     setBusy(true);
     setError("");
@@ -123,8 +130,8 @@ export function CandidateWorkspace({
   // A shared application link is scoped to that exact job, even if it is unavailable.
   const linkedJob = requestedId !== null;
   const visible = linkedJob
-    ? jobs.filter(j => j.id === requestedId)
-    : jobs.filter(j =>
+    ? visitedJobs.filter(j => j.id === requestedId)
+    : visitedJobs.filter(j =>
         (j.title + " " + j.department + " " + j.location)
           .toLowerCase().includes(query.toLowerCase()),
       );
@@ -180,13 +187,19 @@ export function CandidateWorkspace({
               <h2>Job from your link</h2>
               <p>This page shows the position you opened. Your profile and saved applications are available in the tabs above.</p>
             </div>
-          ) : <Field label="Search jobs">
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Position, department or location"
-            />
-          </Field>}
+          ) : <>
+            <div className="fs-linked-job-heading">
+              <h2>Jobs from your links</h2>
+              <p>Only positions you opened from an employer&apos;s shared link are saved here.</p>
+            </div>
+            <Field label="Search linked jobs">
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Position, department or location"
+              />
+            </Field>
+          </>}
           <div className={`fs-cards${linkedJob ? " fs-linked-job" : ""}`}>
             {visible.map((j) => (
               <Panel key={j.id}>
@@ -213,8 +226,8 @@ export function CandidateWorkspace({
           </div>
           {!visible.length && (
             <EmptyState
-              title={linkedJob ? "This job is unavailable" : "No matching jobs"}
-              description={linkedJob ? "The job may have closed or been unpublished, or the link may be incorrect. Ask the employer for an updated link." : "Try another search or check again later."}
+              title={linkedJob ? "This job is unavailable" : query ? "No matching linked jobs" : "No job links visited yet"}
+              description={linkedJob ? "The job may have closed or been unpublished, or the link may be incorrect. Ask the employer for an updated link." : query ? "Try another search within the jobs you opened from employer links." : "Open a job link shared by an employer. That job will then be saved in this workspace for your account."}
             />
           )}
         </>
@@ -228,7 +241,7 @@ export function CandidateWorkspace({
                 ["Reference", "Job", "Stage", "Submitted"],
                 ...applications.map((a) => [
                   a.id,
-                  jobs.find((j) => j.id === a.jobId)?.title || a.jobTitle || a.role,
+                  a.jobTitle || visitedJobs.find((j) => j.id === a.jobId)?.title || a.role,
                   a.stage,
                   a.appliedAt,
                 ]),
@@ -241,7 +254,7 @@ export function CandidateWorkspace({
             {applications.map((a) => (
               <Panel key={a.id}>
                 <StatusBadge>{a.stage}</StatusBadge>
-                <h2>{jobs.find((j) => j.id === a.jobId)?.title || a.jobTitle || a.role}</h2>
+                <h2>{a.jobTitle || visitedJobs.find((j) => j.id === a.jobId)?.title || a.role}</h2>
                 <p className="fs-reference">{a.id}</p>
                 <p>Submitted {new Date(a.appliedAt).toLocaleString("en-GB")}</p>
                 <ApplicationTracker stage={a.stage} />
@@ -301,7 +314,7 @@ export function CandidateWorkspace({
           {interviews.map((i) => (
             <Panel
               key={i.id}
-              title={jobs.find((j) => j.id === i.jobId)?.title || "Interview"}
+              title={applications.find((a) => a.jobId === i.jobId)?.jobTitle || visitedJobs.find((j) => j.id === i.jobId)?.title || "Interview"}
             >
               <StatusBadge>{i.status}</StatusBadge>
               <p>

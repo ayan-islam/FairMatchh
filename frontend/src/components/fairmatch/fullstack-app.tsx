@@ -81,11 +81,10 @@ export function FullstackApp() {
         const me = token ? await platformApi.me(token) : null;
         if (me && me.role !== roles[workspace])
           throw new Error("Use an account for this workspace.");
-        const publicJobs = await api.publicJobs();
         if (!cancelled) {
           setAuth(token);
           setUser(me);
-          setJobs(publicJobs);
+          setJobs([]);
         }
         if (token && me && workspace === "employer") {
           const [j, c, i, a, o, m] = await Promise.all([
@@ -275,7 +274,6 @@ export function FullstackApp() {
           key={`${user.id}:${params.get("job") ?? "browse"}`}
           auth={auth}
           user={user}
-          jobs={jobs}
           requestedId={params.get("job")}
         />
       )}

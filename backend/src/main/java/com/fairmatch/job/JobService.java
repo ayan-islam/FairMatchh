@@ -29,6 +29,20 @@ public class JobService {
   public List<JobView> publicJobs() { return jobs.findByStatusOrderByCreatedAtDesc("Active").stream().filter(this::visible).filter(j->!j.closes().isBefore(LocalDate.now(ZoneId.of("Asia/Dhaka")))).map(this::view).toList(); }
   public JobView publicJob(String id) { var j=jobs.findById(id).orElseThrow(()->new ApiException(HttpStatus.NOT_FOUND,"Job not found.")); if(!j.status().equals("Active")||!visible(j)) throw new ApiException(HttpStatus.NOT_FOUND,"Job not published."); return view(j); }
   public JobView requireOpen(String id) { var j=publicJob(id);if(j.closes().isBefore(LocalDate.now(ZoneId.of("Asia/Dhaka"))))throw new ApiException(HttpStatus.CONFLICT,"This job is no longer accepting applications.");return j; }
+  @Transactional
+  public JobView recordCandidateVisit(String ownerId,String jobId) {
+    var job=requireOpen(jobId);
+    var id=ownerId+":"+jobId;
+    var now=Instant.now();
+    var existing=mongo.findById(id,CandidateJobVisit.class);
+    mongo.save(new CandidateJobVisit(id,ownerId,jobId,existing==null?now:existing.firstVisitedAt(),now));
+    return job;
+  }
+  public List<JobView> candidateVisitedJobs(String ownerId) {
+    var available=publicJobs().stream().collect(java.util.stream.Collectors.toMap(JobView::id,java.util.function.Function.identity()));
+    return mongo.find(Query.query(Criteria.where("ownerId").is(ownerId)).with(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC,"lastVisitedAt")),CandidateJobVisit.class)
+      .stream().map(v->available.get(v.jobId())).filter(Objects::nonNull).toList();
+  }
   public String organizationForOpenJob(String id) { requireOpen(id);return jobs.findById(id).orElseThrow().organizationId(); }
   public void countApplication(String id) { mongo.updateFirst(Query.query(Criteria.where("_id").is(id)),new Update().inc("applications",1),JobDocument.class); }
   public void removeApplicationCount(String id) { mongo.updateFirst(Query.query(Criteria.where("_id").is(id).and("applications").gt(0)),new Update().inc("applications",-1),JobDocument.class); }

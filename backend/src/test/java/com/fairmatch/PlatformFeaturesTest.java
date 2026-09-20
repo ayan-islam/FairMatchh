@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.*;
 @SpringBootTest(properties={"fairmatch.seed=false","fairmatch.bootstrap.demo-enabled=true","fairmatch.mail.dispatch=false"}) @AutoConfigureMockMvc
 class PlatformFeaturesTest {
     static final String DATABASE="fairmatch_platform_test_"+UUID.randomUUID().toString().replace("-","");
+    static final java.util.concurrent.atomic.AtomicInteger CLIENT_NUMBER=new java.util.concurrent.atomic.AtomicInteger(10);
     @DynamicPropertySource static void database(DynamicPropertyRegistry r){r.add("spring.data.mongodb.uri",()->"mongodb://127.0.0.1:27018/"+DATABASE+"?replicaSet=fairmatch-rs");}
     @Autowired MockMvc mvc;@Autowired ObjectMapper json;@Autowired MongoTemplate mongo;
     JsonNode call(MockHttpServletRequestBuilder method,String token,Object body,int expected) throws Exception {
@@ -29,7 +30,8 @@ class PlatformFeaturesTest {
     }
     JsonNode register(String role) throws Exception {
         var name="qa_"+UUID.randomUUID().toString().replace("-","");
-        return call(post("/api/public/auth/register"),null,Map.of("username",name,"password","TestPassword!123","contact",name+"@example.test","name","QA Candidate","role",role,"organizationName","QA Engineering"),200);
+        var registration=post("/api/public/auth/register").with(request->{request.setRemoteAddr("198.51.100."+CLIENT_NUMBER.getAndIncrement());return request;});
+        return call(registration,null,Map.of("username",name,"password","TestPassword!123","contact",name+"@example.test","name","QA Candidate","role",role,"organizationName","QA Engineering"),200);
     }
     String login(String username,String password)throws Exception{return call(post("/api/public/auth/login"),null,Map.of("username",username,"password",password),200).get("token").asText();}
     Map<String,Object> job(){return Map.of("title","Software Engineer","department","CSE","location","Dhaka","workplace","On-site","salary","BDT 40000 monthly","description","Build and test software features with clear technical documentation.","requirements",List.of("Java programming"),"status","Active","closes",LocalDate.now().plusDays(20).toString(),"noFeeConfirmed",true);}
@@ -56,17 +58,33 @@ class PlatformFeaturesTest {
         assertThat(call(get("/api/candidate/drafts/qa-job"),second,null,200).get("values").size()).isZero();
         call(put("/api/candidate/drafts/qa-job"),token,Map.of("skills",true),400);
     }
+    @Test void candidateJobListContainsOnlyLinksVisitedByThatAccount() throws Exception {
+        var employer=login("recruiter","FairMatchDemo!2026");
+        var candidate=register("CANDIDATE").get("token").asText();
+        var otherCandidate=register("CANDIDATE").get("token").asText();
+        var visitedJob=publish(employer);
+        var unseenJob=publish(employer);
+        assertThat(call(get("/api/public/jobs"),null,null,200).toString()).contains(visitedJob,unseenJob);
+        assertThat(call(get("/api/candidate/jobs/visited"),candidate,null,200).size()).isZero();
+        assertThat(call(post("/api/candidate/jobs/"+visitedJob+"/visit"),candidate,Map.of(),200).get("id").asText()).isEqualTo(visitedJob);
+        var visible=call(get("/api/candidate/jobs/visited"),candidate,null,200);
+        assertThat(visible.size()).isEqualTo(1);
+        assertThat(visible.toString()).contains(visitedJob).doesNotContain(unseenJob);
+        assertThat(call(get("/api/candidate/jobs/visited"),otherCandidate,null,200).size()).isZero();
+        call(post("/api/candidate/jobs/"+visitedJob+"/visit"),candidate,Map.of(),200);
+        assertThat(call(get("/api/candidate/jobs/visited"),candidate,null,200).size()).isEqualTo(1);
+    }
     @Test void organizationApprovalControlsPublishingAndTenantIsolation() throws Exception {
         var employer=register("EMPLOYER");var token=employer.get("token").asText();var org=employer.at("/user/organizationId").asText();
         call(post("/api/employer/jobs"),token,job(),409);
-        var admin=login("admin","LocalTestAdmin!2026");
+        var admin=login("admin","FairMatchAdmin!2026");
         var file=new org.springframework.mock.web.MockMultipartFile("file","synthetic-business.pdf","application/pdf",getClass().getResourceAsStream("/test-resume.pdf").readAllBytes());
         var uploaded=mvc.perform(multipart("/api/employer/organization/evidence").file(file).param("type","Business registration").param("description","Synthetic business evidence for integration testing only.").param("expectedVersion","0").header("Authorization","Bearer "+token)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         var documentId=json.readTree(uploaded).get("id").asText();
         var review=Map.of("status","Verified","reason","Reviewed the supplied organization record and synthetic supporting PDF.","reviewed",true,"expectedVersion",1,"reviewedDocumentIds",List.of(documentId));
         call(post("/api/admin/organizations/"+org+"/review"),admin,review,200);
         call(post("/api/admin/organizations/"+org+"/review"),admin,review,409);
-        var id=publish(token);var other=login("recruiter","LocalTestEmployer!2026");
+        var id=publish(token);var other=login("recruiter","FairMatchDemo!2026");
         assertThat(call(get("/api/employer/jobs"),other,null,200).toString()).doesNotContain(id);
         call(put("/api/employer/jobs/"+id),other,job(),404);
         call(put("/api/employer/organization"),token,Map.of("name","Renamed QA Company","industry","IT","location","Dhaka","website","","expectedVersion",2),200);
@@ -74,7 +92,7 @@ class PlatformFeaturesTest {
         call(delete("/api/employer/organization/evidence/"+documentId),token,Map.of("expectedVersion",3),200);
     }
     @Test void ownedApplicationReviewConversationInterviewsAndWithdrawalPersist() throws Exception {
-        var employer=login("recruiter","LocalTestEmployer!2026");var candidate=register("CANDIDATE");var token=candidate.get("token").asText();var stranger=register("CANDIDATE").get("token").asText();
+        var employer=login("recruiter","FairMatchDemo!2026");var candidate=register("CANDIDATE");var token=candidate.get("token").asText();var stranger=register("CANDIDATE").get("token").asText();
         var jobId=publish(employer);var id=call(post("/api/candidate/jobs/"+jobId+"/applications"),token,application(),201).get("id").asText();
         call(post("/api/candidate/jobs/"+jobId+"/applications"),token,application(),409);
         assertThat(call(get("/api/candidate/applications"),token,null,200).toString()).contains(id);
@@ -105,12 +123,12 @@ class PlatformFeaturesTest {
         assertThat(reapplied).isNotEqualTo(id);
     }
     @Test void supportResponsesAndFairnessReviewsArePersistedWithStaleProtection() throws Exception {
-        var token=register("CANDIDATE").get("token").asText();var admin=login("admin","LocalTestAdmin!2026");
+        var token=register("CANDIDATE").get("token").asText();var admin=login("admin","FairMatchAdmin!2026");
         var item=call(post("/api/account/cases"),token,Map.of("subject","Review my application","category","Candidate appeal","reference","QA","detail","Please review how the job criteria were applied to my submitted evidence."),200);
         var id=item.get("id").asText();
         call(post("/api/admin/cases/"+id+"/review"),admin,Map.of("status","Resolved","reason","The review is complete and the assessment has been explained to the candidate.","expectedVersion",0),200);
         assertThat(call(get("/api/account/cases"),token,null,200).get(0).get("status").asText()).isEqualTo("Resolved");
-        var employer=login("recruiter","LocalTestEmployer!2026");var jobId=publish(employer);
+        var employer=login("recruiter","FairMatchDemo!2026");var jobId=publish(employer);
         var report=call(get("/api/employer/jobs/"+jobId+"/fairness"),employer,null,200);
         var body=Map.of("snapshot",report.get("snapshot").asText(),"reason","Reviewed the stated requirements and recorded that there are no applicants yet.","confirmed",true);
         assertThat(call(post("/api/employer/jobs/"+jobId+"/fairness"),employer,body,200).get("reviewCurrent").asBoolean()).isTrue();
@@ -141,7 +159,7 @@ class PlatformFeaturesTest {
             assertThat(call(get("/api/candidate/profile"),token,null,200).at("/cvSummary/courses/0").asText()).isEqualTo("Database Systems");
             call(put("/api/candidate/profile"),token,profile,200);
             assertThat(call(get("/api/candidate/profile"),token,null,200).at("/cvSummary/projects/0").asText()).contains("inventory tracker");
-            var employer=login("recruiter","LocalTestEmployer!2026");var cvJob=new HashMap<String,Object>(job());cvJob.put("requirements",List.of("Database Systems"));
+            var employer=login("recruiter","FairMatchDemo!2026");var cvJob=new HashMap<String,Object>(job());cvJob.put("requirements",List.of("Database Systems"));
             var cvJobId=call(post("/api/employer/jobs"),employer,cvJob,201).get("id").asText();var submitted=application();submitted.put("shareCvSummary",true);
             var applicationId=call(post("/api/candidate/jobs/"+cvJobId+"/applications"),token,submitted,201).get("id").asText();
             var blind=call(get("/api/employer/applications"),employer,null,200);

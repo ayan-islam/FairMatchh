@@ -11,6 +11,8 @@ class JobController {
   JobController(JobService jobs,com.fairmatch.platform.PlatformService platform) {this.jobs=jobs;this.platform=platform;}
   @GetMapping("/api/public/jobs") List<JobView> publicJobs(){return jobs.publicJobs();}
   @GetMapping("/api/public/jobs/{id}") JobView publicJob(@PathVariable String id){return jobs.publicJob(id);}
+  @GetMapping("/api/candidate/jobs/visited") List<JobView> visitedJobs(java.security.Principal p){return jobs.candidateVisitedJobs(platform.account(p.getName()).id());}
+  @PostMapping("/api/candidate/jobs/{id}/visit") JobView visitJob(@PathVariable String id,java.security.Principal p){return jobs.recordCandidateVisit(platform.account(p.getName()).id(),id);}
   @GetMapping("/api/employer/jobs") List<JobView> employerJobs(java.security.Principal p){return jobs.employerJobs(platform.organizationId(p.getName()));}
   @PostMapping("/api/employer/jobs") @ResponseStatus(HttpStatus.CREATED) JobView create(@Valid @RequestBody JobRequest request,java.security.Principal p){var org=platform.organizationId(p.getName());if(request.status().equals("Active"))platform.requireVerified(org);return jobs.save(org,null,request);}
   @PutMapping("/api/employer/jobs/{id}") JobView update(@PathVariable String id,@Valid @RequestBody JobRequest request,java.security.Principal p){var org=platform.organizationId(p.getName());if(request.status().equals("Active"))platform.requireVerified(org);return jobs.save(org,id,request);}

@@ -78,6 +78,7 @@ class CandidatePrivacyController {
         body.put("accountCreatedAt", account.createdAt());
         body.put("profile", platform.profile(account.id()));
         body.put("drafts", read("application_drafts",owned,"jobId","values","updatedAt"));
+        body.put("visitedJobs", read("candidate_job_visits",owned,"jobId","firstVisitedAt","lastVisitedAt"));
         body.put("applications", applications);
         body.put("conversations", read("application_messages",Criteria.where("applicationId").in(applicationIds),"applicationId","sender","message","at"));
         body.put("interviews", read("interviews",Criteria.where("candidateId").in(applicationIds),"candidateId","jobId","date","time","format","location","status","cancellationReason"));

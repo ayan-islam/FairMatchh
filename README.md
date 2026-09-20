@@ -12,6 +12,8 @@ Existing accounts created before this rule remain valid so saved project data is
 
 Candidates can save an unfinished application as a draft. Opening the same job while signed in restores the saved fields and displays when the draft was last saved. A successful submission removes that job's draft. The **My applications** page shows the current milestone across Applied, Shortlisted, Interview, Offer and Hired, plus the latest job-related stage reason recorded by the employer.
 
+The candidate **Jobs** page is link-scoped. It does not display the platform's public job catalogue. Opening an employer's `?workspace=candidate&job=...` link while signed in records that job for the current candidate account; later visits to the Jobs page show only that account's still-open linked jobs. A direct link view remains limited to the one linked position.
+
 Open PowerShell in the project folder (the folder containing this README), then run:
 
 ```powershell
@@ -29,6 +31,8 @@ Read **PROJECT_DEMONSTRATION_GUIDE.md** for the current presentation script, arc
 ## Working workflows
 
 **Candidate ranking:** Employer > Candidate ranking now automatically orders applications by explained text matches against the selected job requirements. Recruiters do not need to rate every candidate to get a first-pass order. A saved rubric supplies custom weights; otherwise requirements have equal weights. Private CV PDFs are excluded, but candidate-confirmed details submitted in an application are included. Optional human rubric assessments remain separate, with evidence quotes and history. Text match is not verified competence or an automatic hiring decision. See [CANDIDATE_RANKING_GUIDE.md](CANDIDATE_RANKING_GUIDE.md).
+
+**AI CV review plan:** The current extractor and ranking are deterministic; they must not be presented as an LLM. [AI_CV_REVIEW_PLAN.md](AI_CV_REVIEW_PLAN.md) describes an evidence-linked LLM extraction layer, local Ollama and cloud-provider choices, privacy constraints and the proposed structured output contract.
 
 **Team access:** An organization owner creates a one-use, email-bound recruiter invitation in Settings > Team & access. A teammate opens Employer > Join an organization on the same FairMatch installation and creates their own account. Recruiters can work on hiring records but cannot manage membership or business verification files. The owner can suspend and restore access; suspension revokes saved sessions. Invitations are shared manually and do not verify email inbox ownership. See **TEAM_ACCESS_GUIDE.md**.
 

@@ -1,5 +1,5 @@
 import { request, type ApplicationInput, type Receipt } from "./api";
-import type { Candidate } from "./demo-data";
+import type { Candidate, Job } from "./demo-data";
 export type User = {
   id: string;
   username: string;
@@ -138,6 +138,15 @@ export const platformApi = {
     request<Profile>("candidate/profile", "PUT", {role:input.role,experience:input.experience,education:input.education,skills:input.skills}, auth),
   applications: (auth: string) =>
     request<OwnApplication[]>("candidate/applications", "GET", undefined, auth),
+  visitedJobs: (auth: string) =>
+    request<Job[]>("candidate/jobs/visited", "GET", undefined, auth),
+  visitJob: (jobId: string, auth: string) =>
+    request<Job>(
+      `candidate/jobs/${encodeURIComponent(jobId)}/visit`,
+      "POST",
+      {},
+      auth,
+    ),
   apply: (jobId: string, input: ApplicationInput, auth: string) =>
     request<Receipt>(
       `candidate/jobs/${encodeURIComponent(jobId)}/applications`,
