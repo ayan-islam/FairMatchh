@@ -32,11 +32,26 @@ public class JobService {
   @Transactional
   public JobView recordCandidateVisit(String ownerId,String jobId) {
     var job=requireOpen(jobId);
-    var id=ownerId+":"+jobId;
-    var now=Instant.now();
-    var existing=mongo.findById(id,CandidateJobVisit.class);
-    mongo.save(new CandidateJobVisit(id,ownerId,jobId,existing==null?now:existing.firstVisitedAt(),now));
+    rememberCandidateVisit(ownerId,jobId,Instant.now());
     return job;
+  }
+  public void rememberCandidateVisit(String ownerId,String jobId,Instant visitedAt) {
+    if(ownerId==null||jobId==null)return;
+    var id=ownerId+":"+jobId;
+    var existing=mongo.findById(id,CandidateJobVisit.class);
+    var first=existing==null||visitedAt.isBefore(existing.firstVisitedAt())?visitedAt:existing.firstVisitedAt();
+    var last=existing==null||visitedAt.isAfter(existing.lastVisitedAt())?visitedAt:existing.lastVisitedAt();
+    mongo.save(new CandidateJobVisit(id,ownerId,jobId,first,last));
+  }
+  @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+  public void backfillCandidateJobVisits() {
+    var query=Query.query(Criteria.where("ownerId").ne(null));
+    query.fields().include("ownerId","jobId","appliedAt");
+    for(var application:mongo.find(query,org.bson.Document.class,"applications")) {
+      var value=application.get("appliedAt");
+      var at=value instanceof Date date?date.toInstant():value instanceof Instant instant?instant:Instant.now();
+      rememberCandidateVisit(application.getString("ownerId"),application.getString("jobId"),at);
+    }
   }
   public List<JobView> candidateVisitedJobs(String ownerId) {
     var available=publicJobs().stream().collect(java.util.stream.Collectors.toMap(JobView::id,java.util.function.Function.identity()));

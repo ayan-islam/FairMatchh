@@ -46,6 +46,7 @@ public class ApplicationService {
         var cvSummary=ownerId!=null&&r.shareCvSummary()?platform.profile(ownerId).cvSummary():null;
         if(r.shareCvSummary()&&!hasCvHighlights(cvSummary))throw new ApiException(HttpStatus.BAD_REQUEST,"Confirm your CV highlights in Documents before sharing them with this employer.");
         var a = applications.insert(new ApplicationDocument("FM-" + UUID.randomUUID(), organization, jobId, r.name().trim(), contact, r.role().trim(), r.experience().trim(), r.education().trim(), r.skills().stream().map(String::trim).distinct().toList(), r.example().trim(), r.availability(), r.location(), "New", "Needs review", "2026-09-v1", Instant.now(), null, null,ownerId,cvSummary));
+        if(ownerId!=null)jobs.rememberCandidateVisit(ownerId,jobId,a.appliedAt());
         jobs.countApplication(jobId);
         if(ownerId!=null)mongo.remove(Query.query(Criteria.where("_id").is(ownerId+":"+jobId).and("ownerId").is(ownerId)),"application_drafts");
         audit.record(organization, "APPLICATION_SUBMITTED", a.id());

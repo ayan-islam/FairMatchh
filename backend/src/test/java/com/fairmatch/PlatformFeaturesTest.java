@@ -21,7 +21,7 @@ class PlatformFeaturesTest {
     static final String DATABASE="fairmatch_platform_test_"+UUID.randomUUID().toString().replace("-","");
     static final java.util.concurrent.atomic.AtomicInteger CLIENT_NUMBER=new java.util.concurrent.atomic.AtomicInteger(10);
     @DynamicPropertySource static void database(DynamicPropertyRegistry r){r.add("spring.data.mongodb.uri",()->"mongodb://127.0.0.1:27018/"+DATABASE+"?replicaSet=fairmatch-rs");}
-    @Autowired MockMvc mvc;@Autowired ObjectMapper json;@Autowired MongoTemplate mongo;
+    @Autowired MockMvc mvc;@Autowired ObjectMapper json;@Autowired MongoTemplate mongo;@Autowired com.fairmatch.job.JobService jobService;
     JsonNode call(MockHttpServletRequestBuilder method,String token,Object body,int expected) throws Exception {
         if(token!=null)method.header("Authorization","Bearer "+token);
         if(body!=null)method.contentType("application/json").content(json.writeValueAsString(body));
@@ -60,7 +60,8 @@ class PlatformFeaturesTest {
     }
     @Test void candidateJobListContainsOnlyLinksVisitedByThatAccount() throws Exception {
         var employer=login("recruiter","FairMatchDemo!2026");
-        var candidate=register("CANDIDATE").get("token").asText();
+        var candidateSession=register("CANDIDATE");
+        var candidate=candidateSession.get("token").asText();
         var otherCandidate=register("CANDIDATE").get("token").asText();
         var visitedJob=publish(employer);
         var unseenJob=publish(employer);
@@ -73,6 +74,11 @@ class PlatformFeaturesTest {
         assertThat(call(get("/api/candidate/jobs/visited"),otherCandidate,null,200).size()).isZero();
         call(post("/api/candidate/jobs/"+visitedJob+"/visit"),candidate,Map.of(),200);
         assertThat(call(get("/api/candidate/jobs/visited"),candidate,null,200).size()).isEqualTo(1);
+        mongo.getCollection("applications").insertOne(new Document("_id","FM-legacy-link-history").append("ownerId",candidateSession.at("/user/id").asText()).append("jobId",unseenJob).append("appliedAt",java.util.Date.from(java.time.Instant.now().minusSeconds(60))));
+        jobService.backfillCandidateJobVisits();
+        var backfilled=call(get("/api/candidate/jobs/visited"),candidate,null,200);
+        assertThat(backfilled.size()).isEqualTo(2);
+        assertThat(backfilled.toString()).contains(visitedJob,unseenJob);
     }
     @Test void organizationApprovalControlsPublishingAndTenantIsolation() throws Exception {
         var employer=register("EMPLOYER");var token=employer.get("token").asText();var org=employer.at("/user/organizationId").asText();
