@@ -714,8 +714,7 @@ function ApplicationForm({
         const cleanSkills=skills.map((s) => s.trim()).filter(Boolean);
         const nextErrors: Record<string, string> = {};
         if (!role.trim()) nextErrors.role="Enter your current or recent position.";
-        if (experience.trim().length < 25) nextErrors.experience=`Enter at least 25 characters (${experience.trim().length} entered).`;
-        if (experience.length > 6000) nextErrors.experience="Work experience must be at most 6000 characters.";
+        if (!experience.trim()) nextErrors.experience="Enter your work experience.";
         if (education.length > 500) nextErrors.education="Education must be at most 500 characters.";
         if (!cleanSkills.length) nextErrors.skills="Add at least one relevant skill.";
         if (cleanSkills.length > 20) nextErrors.skills=`Add no more than 20 skills (${cleanSkills.length} entered).`;
@@ -807,8 +806,8 @@ function ApplicationForm({
               {["experience", "example"].includes(k) ? (
                 <Textarea
                   required
-                  minLength={k === "experience" ? 25 : 30}
-                  maxLength={6000}
+                  minLength={k === "example" ? 30 : undefined}
+                  maxLength={k === "example" ? 6000 : undefined}
                   value={form[k]}
                   onChange={(e) => setForm({ ...form, [k]: e.target.value })}
                 />
