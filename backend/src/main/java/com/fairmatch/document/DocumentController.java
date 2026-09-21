@@ -26,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController @RequestMapping("/api/candidate/documents")
 class DocumentController {
     private final PlatformService platform;private final MongoTemplate mongo;private final AuditService audit;private final ObjectMapper json;private final AiCvReviewService ai;
+    private final Set<String> aiJobs=java.util.concurrent.ConcurrentHashMap.newKeySet();
     private final HttpClient http=HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).connectTimeout(Duration.ofSeconds(3)).build();
     DocumentController(PlatformService platform,MongoTemplate mongo,AuditService audit,ObjectMapper json,AiCvReviewService ai){this.platform=platform;this.mongo=mongo;this.audit=audit;this.json=json;this.ai=ai;}
     record SourcePage(int number,String text,String method,boolean truncated){}
@@ -67,8 +68,7 @@ class DocumentController {
         var pages=result.has("pages")?Arrays.asList(json.convertValue(result.get("pages"),SourcePage[].class)):List.<SourcePage>of();
         var suggestions=result.has("suggestions")?Arrays.asList(json.convertValue(result.get("suggestions"),Suggestion[].class)):List.<Suggestion>of();
         var warnings=result.has("warnings")?Arrays.asList(json.convertValue(result.get("warnings"),String[].class)):List.<String>of();
-        var outcome=ai.review(pages);if(outcome.warning()!=null){var withAi=new ArrayList<>(warnings);withAi.add(outcome.warning());warnings=List.copyOf(withAi);}
-        return new Resume(id,owner,name,bytes,result.get("status").asText(),result.get("text").asText(),created,pages,suggestions,warnings,result.path("extractionVersion").asInt(1),outcome.review(),outcome.status());
+        return new Resume(id,owner,name,bytes,result.get("status").asText(),result.get("text").asText(),created,pages,suggestions,warnings,result.path("extractionVersion").asInt(1),null,"Ready to review");
     }
     @PostMapping("/{id}/extraction") Resume reextract(@PathVariable String id,@RequestParam(defaultValue="false") boolean ocr,Principal p) throws java.io.IOException {
         var old=owned(id,owner(p));
@@ -79,12 +79,23 @@ class DocumentController {
         if(updated==null)throw new ApiException(HttpStatus.CONFLICT,"This document was removed. Refresh the list.");
         audit.record("platform","DOCUMENT_REEXTRACTED",id,"Candidate requested page-linked text extraction; profile unchanged",p.getName());return updated;
     }
-    @PostMapping("/{id}/ai-review") Resume reviewWithAi(@PathVariable String id,Principal p){
-        var old=owned(id,owner(p));var outcome=ai.review(old.pages());
-        if(outcome.review()==null)throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE,outcome.warning()==null?"Local AI review is not configured.":outcome.warning());
-        var updated=mongo.findAndModify(Query.query(Criteria.where("_id").is(id).and("ownerId").is(old.ownerId())),new Update().set("aiReview",outcome.review()).set("aiStatus",outcome.status()),org.springframework.data.mongodb.core.FindAndModifyOptions.options().returnNew(true),Resume.class);
-        if(updated==null)throw new ApiException(HttpStatus.CONFLICT,"This document was removed. Refresh the list.");
-        audit.record("platform","DOCUMENT_AI_REVIEWED",id,"Local Ollama CV review created with "+outcome.review().model(),p.getName());return updated;
+    @PostMapping("/{id}/ai-review") ResponseEntity<Resume> reviewWithAi(@PathVariable String id,Principal p){
+        var old=owned(id,owner(p));
+        if(old.pages()==null||old.pages().stream().noneMatch(page->page.text()!=null&&!page.text().isBlank()))throw new ApiException(HttpStatus.BAD_REQUEST,"AI review needs readable CV text. Retry extraction with OCR first.");
+        var started=mongo.findAndModify(Query.query(Criteria.where("_id").is(id).and("ownerId").is(old.ownerId())),new Update().set("aiStatus","Processing"),org.springframework.data.mongodb.core.FindAndModifyOptions.options().returnNew(true),Resume.class);
+        if(started==null)throw new ApiException(HttpStatus.CONFLICT,"This document was removed. Refresh the list.");
+        if(aiJobs.add(id)){
+            var actor=p.getName();
+            java.util.concurrent.CompletableFuture.runAsync(()->{
+                try{
+                    var outcome=ai.review(old.pages());var update=new Update().set("aiStatus",outcome.status());
+                    if(outcome.review()!=null)update.set("aiReview",outcome.review());
+                    mongo.findAndModify(Query.query(Criteria.where("_id").is(id).and("ownerId").is(old.ownerId())),update,org.springframework.data.mongodb.core.FindAndModifyOptions.options().returnNew(true),Resume.class);
+                    if(outcome.review()!=null)audit.record("platform","DOCUMENT_AI_REVIEWED",id,"Local Ollama CV review created with "+outcome.review().model(),actor);
+                }finally{aiJobs.remove(id);}
+            });
+        }
+        return ResponseEntity.accepted().body(started);
     }
     @PostMapping("/{id}/confirmation") @org.springframework.transaction.annotation.Transactional Resume confirm(@PathVariable String id,@Valid @RequestBody Confirmation r,Principal p){
         var old=owned(id,owner(p));var h=r.highlights()==null?new CvHighlightsInput(List.of(),List.of(),List.of()):r.highlights();

@@ -39,6 +39,14 @@ type Resume = {
   } | null;
 };
 type AiEvidence = { label: string; sourcePage: number; evidence: string; confidence: number };
+async function parseApiResponse<T>(response: Response, fallback: string): Promise<T> {
+  const text = await response.text();
+  let result: {message?: string};
+  try { result = text ? JSON.parse(text) as {message?: string} : {}; }
+  catch { throw new Error(`${fallback} The server returned HTTP ${response.status} instead of a valid response.`); }
+  if (!response.ok) throw new Error(result.message || `${fallback} The server returned HTTP ${response.status}.`);
+  return result as T;
+}
 export function CandidateDocuments({
   auth,
   profile,
@@ -78,8 +86,7 @@ export function CandidateDocuments({
         headers: { Authorization: auth },
         body,
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Upload failed.");
+      const result = await parseApiResponse<Resume>(response, "CV upload failed.");
       setReview(result);
       setRevision((r) => r + 1);
     } catch (e) {
@@ -96,8 +103,7 @@ export function CandidateDocuments({
       const response = await fetch(`/api/candidate/documents/${document.id}/extraction?ocr=${ocr}`, {
         method: "POST", headers: { Authorization: auth }, signal: AbortSignal.timeout(300000),
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Extraction could not be refreshed.");
+      const result = await parseApiResponse<Resume>(response, "Extraction could not be refreshed.");
       setReview(result);
       setRevision(r => r + 1);
     } catch (e) { setError((e as Error).message); }
@@ -111,10 +117,20 @@ export function CandidateDocuments({
       const response = await fetch(`/api/candidate/documents/${document.id}/ai-review`, {
         method: "POST", headers: {Authorization: auth, "Content-Type":"application/json"}, body:"{}", signal:AbortSignal.timeout(300000),
       });
-      const result = await response.json() as Resume & {message?:string};
-      if (!response.ok) throw new Error(result.message || "Qwen AI review could not be completed.");
-      setReview(result);
-      setRevision(r => r + 1);
+      await parseApiResponse<Resume>(response, "Qwen AI review could not be started.");
+      let completed:Resume|undefined;
+      for(let attempt=0;attempt<100;attempt++){
+        await new Promise(resolve=>setTimeout(resolve,3000));
+        const latest=await request<Resume[]>("candidate/documents","GET",undefined,auth);
+        setDocuments(latest);
+        const current=latest.find(item=>item.id===document.id);
+        if(!current)throw new Error("This CV was removed while Qwen was reviewing it.");
+        if(current.aiStatus!=="Processing"){completed=current;break;}
+      }
+      if(!completed)throw new Error("Qwen is still processing this CV. You can leave this page and check the document again shortly.");
+      if(!completed.aiReview)throw new Error(completed.aiStatus || "Qwen AI review could not be completed.");
+      setReview(completed);
+      setRevision(r=>r+1);
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
   }
