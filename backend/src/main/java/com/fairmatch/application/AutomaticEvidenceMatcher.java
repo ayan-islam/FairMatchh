@@ -34,7 +34,7 @@ final class AutomaticEvidenceMatcher {
                         best = overlap.size();
                         bestWords = overlap;
                         source = item.field();
-                        excerpt = excerpt(passage, overlap);
+                        excerpt = isSkillList(item.field()) ? item.text().strip() : excerpt(passage, overlap);
                     }
                 }
             }
@@ -63,6 +63,10 @@ final class AutomaticEvidenceMatcher {
         int start = Math.max(0, position - 70);
         int end = Math.min(passage.length(), start + 240);
         return (start > 0 ? "…" : "") + passage.substring(start, end).strip() + (end < passage.length() ? "…" : "");
+    }
+
+    private static boolean isSkillList(String field) {
+        return "skills".equals(field) || "cv_skills".equals(field);
     }
 
     private static double round(double value) { return Math.round(value * 100) / 100.0; }

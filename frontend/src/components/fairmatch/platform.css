@@ -264,6 +264,16 @@
 .fs-ranking-details h3,.fs-ranking-row h3 { margin-bottom:7px; color:#12334a; font-weight:650; }
 .fs-ranking-details ol,.fs-criterion ol { list-style:decimal; padding-left:24px; line-height:1.7; }
 .fs-ranking-details blockquote { margin-top:8px; padding:12px 14px; border-left:3px solid #00857b; background:#eff6f5; white-space:pre-wrap; }
+.fs-ranking-match-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.fs-ranking-match-heading > span { flex:0 0 auto; padding:4px 8px; border-radius:999px; background:#eef3f4; color:#526b7f; font-size:11px; font-weight:650; }
+.fs-ranking-match-caution { margin-top:9px; padding:10px 12px; border-radius:7px; background:#fff7df; color:#6f5410!important; font-size:12px; }
+.fs-ranking-skill-source { margin-top:12px; }
+.fs-ranking-skill-source > p { margin-bottom:7px; font-size:12px; font-weight:650; }
+.fs-ranking-skill-source ul { display:grid; gap:6px; margin:0; padding:0; list-style:none; }
+.fs-ranking-skill-source li { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; min-width:0; padding:9px 11px; border:1px solid #dbe6e8; border-radius:7px; background:#f8fafb; color:#29445a; }
+.fs-ranking-skill-source li span { min-width:0; overflow-wrap:anywhere; line-height:1.45; }
+.fs-ranking-skill-source li b { flex:0 0 auto; padding:3px 7px; border-radius:999px; background:#dff3ed; color:#00756d; font-size:10px; white-space:nowrap; }
+.fs-ranking-skill-source li.is-matched { border-color:#83c8bd; background:#edf8f5; }
 .fs-ranking-empty { display:grid; justify-items:center; gap:7px; padding:44px 20px; text-align:center; color:#60708a; }
 .fs-ranking-empty strong { color:#12334a; }
 .fs-ranking-rubric { position:sticky; top:20px; }
@@ -302,7 +312,7 @@
 .fs-candidate-action-grid button { justify-content:flex-start; min-height:42px; white-space:normal; }
 .fs-candidate-action-note { color:#8b650e; font-size:12px; }
 @media(max-width:1000px) { .fs-ranking-workspace { grid-template-columns:1fr; } .fs-ranking-rubric { position:static; } .fs-ranking-toolbar { align-items:stretch; flex-direction:column; } .fs-ranking-toolbar-meta { justify-content:flex-start; } }
-@media(max-width:700px) { .fs-ranking-filters,.fs-ranking-assessment-body,.fs-candidate-action-facts,.fs-candidate-action-grid { grid-template-columns:1fr; } .fs-ranking-candidate-main,.fs-candidate-action-heading { grid-template-columns:36px minmax(0,1fr); } .fs-ranking-score,.fs-candidate-action-heading > .fm-badge { grid-column:2; justify-self:start; } .fs-ranking-toolbar-meta,.fs-ranking-assessments > summary { align-items:flex-start; flex-direction:column; } .fs-ranking-results,.fs-ranking-rubric,.fs-ranking-panel { padding:17px; } .fs-ranking-row-heading { flex-direction:column; } }
+@media(max-width:700px) { .fs-ranking-filters,.fs-ranking-assessment-body,.fs-candidate-action-facts,.fs-candidate-action-grid { grid-template-columns:1fr; } .fs-ranking-candidate-main,.fs-candidate-action-heading { grid-template-columns:36px minmax(0,1fr); } .fs-ranking-score,.fs-candidate-action-heading > .fm-badge { grid-column:2; justify-self:start; } .fs-ranking-toolbar-meta,.fs-ranking-assessments > summary,.fs-ranking-match-heading,.fs-ranking-skill-source li { align-items:flex-start; flex-direction:column; } .fs-ranking-results,.fs-ranking-rubric,.fs-ranking-panel { padding:17px; } .fs-ranking-row-heading { flex-direction:column; } }
 .fs-team-invite, .fs-team-decision, .fs-team-code {
   border: 1px solid #d8e5e7;
   border-radius: 10px;
