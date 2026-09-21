@@ -54,7 +54,7 @@ The frontend build uses Node.js 22.13+ (Node.js 24 on this laptop). PDF.js rende
 
 Keep the entire **data** folder: MongoDB records, MinIO objects and local signing/service keys live there. Do not delete it to restart. Existing jobs and anonymous applications are preserved. Old anonymous applications are not automatically assigned to new accounts based on an unverified email address.
 
-All services bind locally. No online deployment is configured or required for the September 15 assessment. Email verification/recovery, revocable sessions and SMTP retries are implemented; actual delivery still requires a configured sender account. Team invitations work on the same local installation and are shared manually. Payments, SMS, semantic skill matching, fairness validation and automated retention remain unfinished.
+All services bind locally. No online deployment is configured or required for the September 15 assessment. Email verification/recovery, transactional recruitment emails, emailed recruiter invitations, revocable sessions and SMTP retries are implemented; actual delivery still requires a configured sender account and real inbox verification. Payments, SMS, semantic skill matching, fairness validation and automated retention remain unfinished.
 
 ## Tests and rebuild
 

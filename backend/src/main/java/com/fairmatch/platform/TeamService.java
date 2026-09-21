@@ -25,8 +25,11 @@ public class TeamService {
     private final PlatformService platform;
     private final PasswordEncoder passwords;
     private final AuditService audit;
-    TeamService(MongoTemplate mongo,PlatformService platform,PasswordEncoder passwords,AuditService audit) {
-        this.mongo=mongo;this.platform=platform;this.passwords=passwords;this.audit=audit;
+    private final EmailQueue email;
+    private final String publicUrl;
+    TeamService(MongoTemplate mongo,PlatformService platform,PasswordEncoder passwords,AuditService audit,EmailQueue email,
+        @org.springframework.beans.factory.annotation.Value("${fairmatch.public-url:http://127.0.0.1:3000}") String publicUrl) {
+        this.mongo=mongo;this.platform=platform;this.passwords=passwords;this.audit=audit;this.email=email;this.publicUrl=publicUrl.replaceAll("/+$","");
     }
     @Document("team_invitations") record Invitation(@Id String id,String organizationId,String email,
         @Indexed(unique=true) String codeHash,String status,long version,Instant createdAt,Instant expiresAt,String actor,String acceptedBy) {}
@@ -41,7 +44,7 @@ public class TeamService {
     public record InviteView(String id,String email,String status,long version,Instant createdAt,Instant expiresAt) {}
     public record MemberView(String id,String name,String email,String role,String status,long version) {}
     public record Board(boolean canManage,String organizationName,List<MemberView> members,List<InviteView> invitations) {}
-    public record Created(InviteView invitation,String code) {}
+    public record Created(InviteView invitation,String code,boolean emailQueued) {}
     private static String normalize(String value){return value.trim().toLowerCase(Locale.ROOT);}
     private String hash(String code) {
         try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(code.getBytes(StandardCharsets.UTF_8)));}
@@ -74,7 +77,11 @@ public class TeamService {
         var code=Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);var now=Instant.now();
         var saved=mongo.insert(new Invitation(UUID.randomUUID().toString(),org,email,hash(code),"Pending",0,now,now.plusSeconds(48*3600),username,null));
         audit.record(org,"TEAM_INVITATION_CREATED",saved.id(),"Recruiter invitation created; expires in 48 hours",username);
-        return new Created(view(saved),code);
+        var organization=platform.organization(org);
+        boolean emailQueued=this.email.enqueueIfConfigured(email,"You are invited to join "+organization.name()+" on FairMatch",
+            "You have been invited to join "+organization.name()+" as a recruiter.\n\nInvitation code: "+code+
+            "\n\nOpen FairMatch: "+publicUrl+"/?workspace=employer\nChoose Join an organization and use this email address with the code above.\n\nThe code expires in 48 hours and can be used once. If you did not expect this invitation, ignore this email.",saved.expiresAt());
+        return new Created(view(saved),code,emailQueued);
     }
     @Transactional public void revoke(String username,String id,Revision input) {
         var org=platform.requireOrganizationOwner(username);lock(org);

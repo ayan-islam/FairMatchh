@@ -28,12 +28,15 @@ public class PlatformService implements UserDetailsService {
     private final PasswordEncoder passwords;
     private final AuditService audit;
     private final OrganizationEvidenceService evidence;
+    private final EmailQueue email;
+    private final String publicUrl;
     private final String employerUsername, employerPassword, adminPassword;
-    public PlatformService(MongoTemplate mongo, PasswordEncoder passwords, AuditService audit,OrganizationEvidenceService evidence,
+    public PlatformService(MongoTemplate mongo, PasswordEncoder passwords, AuditService audit,OrganizationEvidenceService evidence,EmailQueue email,
         @Value("${fairmatch.demo.username}") String username,@Value("${fairmatch.demo.password}") String password,
-        @Value("${fairmatch.admin.password:LocalTestAdmin!2026}") String adminPassword) {
+        @Value("${fairmatch.admin.password:LocalTestAdmin!2026}") String adminPassword,
+        @Value("${fairmatch.public-url:http://127.0.0.1:3000}") String publicUrl) {
         this.mongo=mongo;this.passwords=passwords;this.audit=audit;
-        this.evidence=evidence;
+        this.evidence=evidence;this.email=email;this.publicUrl=publicUrl.replaceAll("/+$","");
         this.employerUsername=username;this.employerPassword=password;this.adminPassword=adminPassword;
     }
     @Value("${fairmatch.bootstrap.demo-enabled:false}") private boolean demoEnabled;
@@ -189,7 +192,13 @@ public class PlatformService implements UserDetailsService {
             .map(a->new Member(a.id(),a.name(),a.contact(),owner.equals(a.id())?"Owner":"Recruiter",membershipActive(a)?"Active":"Suspended")).toList();
     }
     public void notify(String ownerId,String title,String message,String reference) {
-        if(ownerId!=null)mongo.insert(new Notification(UUID.randomUUID().toString(),ownerId,title,message,reference,Instant.now(),false));
+        if(ownerId==null)return;
+        mongo.insert(new Notification(UUID.randomUUID().toString(),ownerId,title,message,reference,Instant.now(),false));
+        var account=mongo.findById(ownerId,Account.class);
+        boolean verified=account!=null&&mongo.exists(Query.query(Criteria.where("_id").is(ownerId).and("contact").is(account.contact())),AccountSecurityService.Verification.class);
+        if(verified)email.enqueueIfConfigured(account.contact(),"FairMatch: "+title,
+            "Hello "+account.name()+",\n\n"+message+"\n\nReference: "+(reference==null||reference.isBlank()?"Not provided":reference)+
+            "\n\nOpen FairMatch: "+publicUrl+"\n\nThis is a transactional account notification from FairMatch.",Instant.now().plusSeconds(7*86400));
     }
     public void notifyOrganization(String org,String title,String message,String reference) {
         mongo.find(Query.query(Criteria.where("organizationId").is(org)),Account.class).forEach(a->notify(a.id(),title,message,reference));

@@ -17,7 +17,22 @@ public class EmailQueue {
     private final MongoTemplate mongo;private final MailDelivery delivery;private final boolean enabled;
     public EmailQueue(MongoTemplate mongo,MailDelivery delivery,@Value("${fairmatch.mail.dispatch:true}") boolean enabled){this.mongo=mongo;this.delivery=delivery;this.enabled=enabled;}
     @Document("email_outbox") record Email(@Id String id,String recipient,String subject,String body,String status,int attempts,Instant dueAt,Instant validUntil,@Indexed(expireAfter="0s") Instant purgeAt){}
-    public void enqueue(String recipient,String subject,String body,Instant validUntil){delivery.requireConfigured();mongo.insert(new Email(UUID.randomUUID().toString(),recipient,subject,body,"Pending",0,Instant.now(),validUntil,Instant.now().plusSeconds(86400)));}
+    public boolean configured(){return delivery.configured();}
+    public void enqueue(String recipient,String subject,String body,Instant validUntil){delivery.requireConfigured();insert(recipient,subject,body,validUntil);}
+    /** Recruitment actions must still succeed when an installation has no SMTP account. */
+    public boolean enqueueIfConfigured(String recipient,String subject,String body,Instant validUntil){
+        if(!delivery.configured())return false;
+        insert(recipient,subject,body,validUntil);return true;
+    }
+    private void insert(String recipient,String subject,String body,Instant validUntil){
+        var now=Instant.now();
+        if(recipient==null||!recipient.trim().matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")||recipient.length()>254)
+            throw new IllegalArgumentException("A valid email recipient is required.");
+        var safeSubject=subject==null?"":subject.replaceAll("[\\r\\n]+"," ").trim();
+        if(safeSubject.isBlank()||safeSubject.length()>200||body==null||body.isBlank()||body.length()>12000||validUntil==null)
+            throw new IllegalArgumentException("Email subject, body or delivery window is invalid.");
+        mongo.insert(new Email(UUID.randomUUID().toString(),recipient.trim().toLowerCase(java.util.Locale.ROOT),safeSubject,body,"Pending",0,now,validUntil,validUntil.plusSeconds(86400)));
+    }
     @Scheduled(fixedDelay=15000)
     public void dispatch(){
         if(!enabled||!delivery.configured())return;

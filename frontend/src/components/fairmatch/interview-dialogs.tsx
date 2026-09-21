@@ -40,7 +40,7 @@ export function ScheduleDialog({ candidates, jobs, interview, initialCandidateId
   return <Dialog open onOpenChange={v => !v && !saving && onClose()}>
     <DialogContent className="fm-dialog">
       <DialogHeader><DialogTitle>{interview ? "Reschedule interview" : "Schedule an interview"}</DialogTitle>
-        <DialogDescription>Times use Asia/Dhaka. Candidate accounts receive an in-app update. Email and SMS are not connected; share details manually with legacy applicants.</DialogDescription></DialogHeader>
+        <DialogDescription>Times use Asia/Dhaka. Candidate accounts receive an in-app update; verified email addresses also receive it when SMTP is configured. Share details manually with legacy applicants.</DialogDescription></DialogHeader>
       <div className="fm-dialog-body">
         <fieldset disabled={saving} className="fm-interview-form">
           <Field label="Candidate" required>

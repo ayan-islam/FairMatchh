@@ -10,6 +10,10 @@ fairmatch.mail.from=
 fairmatch.mail.ssl=false
 fairmatch.mail.dispatch=true
 
+# Public address included in recruitment and invitation emails.
+# Keep the local value for a laptop demonstration; use the deployed HTTPS URL later.
+fairmatch.public-url=http://127.0.0.1:3000
+
 # Existing installations already have their administrator: leave this false.
 # For a new empty database only, fill these values and enable once, then disable it.
 # This never resets passwords or promotes existing candidate/employer accounts.

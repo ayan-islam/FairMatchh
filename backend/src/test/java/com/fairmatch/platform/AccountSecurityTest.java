@@ -28,7 +28,7 @@ class AccountSecurityTest {
     @DynamicPropertySource static void properties(DynamicPropertyRegistry r) {
         r.add("spring.data.mongodb.uri",()->"mongodb://127.0.0.1:27018/"+DATABASE+"?replicaSet=fairmatch-rs");
     }
-    @Autowired MockMvc mvc; @Autowired ObjectMapper json; @Autowired MongoTemplate mongo;
+    @Autowired MockMvc mvc; @Autowired ObjectMapper json; @Autowired MongoTemplate mongo; @Autowired PlatformService platform;
     @MockitoBean MailDelivery delivery;
     @BeforeEach void setup() { reset(delivery); when(delivery.configured()).thenReturn(true); }
     JsonNode call(MockHttpServletRequestBuilder method,String token,Object body,int expected)throws Exception {
@@ -77,6 +77,16 @@ class AccountSecurityTest {
         call(post("/api/account/verification/confirm"),token,body,200);
         call(post("/api/account/verification/confirm"),token,body,400);
         assertThat(call(get("/api/account/security"),token,null,200).get("verified").asBoolean()).isTrue();
+    }
+    @Test void verifiedAccountsReceiveDurableRecruitmentEmailWithoutExposingUnverifiedAddresses()throws Exception {
+        var account=register();String token=account.get("token").asText(),owner=account.at("/user/id").asText(),recipient=account.at("/user/contact").asText();
+        platform.notify(owner,"Application status updated","Your application is now Shortlisted.","FM-test");
+        assertThat(mongo.count(Query.query(Criteria.where("recipient").is(recipient).and("subject").is("FairMatch: Application status updated")),EmailQueue.Email.class)).isZero();
+        var challenge=call(post("/api/account/verification"),token,Map.of(),200);
+        call(post("/api/account/verification/confirm"),token,Map.of("challengeId",challenge.get("challengeId").asText(),"code",code(recipient)),200);
+        platform.notify(owner,"Application status updated","Your application is now Shortlisted.","FM-test");
+        var queued=mongo.findOne(Query.query(Criteria.where("recipient").is(recipient).and("subject").is("FairMatch: Application status updated")),EmailQueue.Email.class);
+        assertThat(queued).isNotNull();assertThat(queued.status()).isEqualTo("Pending");assertThat(queued.body()).contains("Shortlisted","FM-test","Open FairMatch");
     }
     @Test void resetRevokesSessionsAndDoesNotRevealWhetherAnAccountExists()throws Exception {
         var a=register();String token=a.get("token").asText(),user=a.at("/user/username").asText();

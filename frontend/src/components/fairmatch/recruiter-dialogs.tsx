@@ -645,7 +645,7 @@ export function RequestDialog({
           />
         </Field>
         <p className="fm-muted">
-          The request will be saved in the candidate’s application conversation and in-app inbox. Email and SMS are not connected.
+          The request will be saved in the candidate’s application conversation and in-app inbox. A verified candidate also receives email when SMTP is configured; SMS is not connected.
         </p>
         <DialogFooter>
           <Button variant="outline" disabled={saving} onClick={onClose}>

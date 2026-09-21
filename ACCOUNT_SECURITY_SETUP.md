@@ -9,8 +9,10 @@ Updated 9 September 2026. These changes are installed in the Desktop project.
 - Password changes require the current password. Passwords use BCrypt; the API never returns password hashes.
 - Verification and recovery use random six-digit codes, ten-minute expiry, a five-attempt limit and single-use consumption. Recovery gives the same public response for known and unknown accounts.
 - Login, registration, recovery and verification requests have server-side attempt limits.
-- Email uses a durable MongoDB outbox and real SMTP with TLS. The worker retries delivery up to five attempts, and clears message bodies after success, expiry or final failure. Outbox records expire after one day.
+- Email uses a durable MongoDB outbox and real SMTP with TLS. The worker retries delivery up to five attempts, and clears message bodies after success, expiry or final failure. Outbox records expire one day after their delivery window closes.
 - The email challenge and outbox record are committed together. A crash after the SMTP server accepts a message but before its saved acknowledgement may produce a repeated email; a consumed code still cannot be reused.
+- Verified accounts receive transactional recruitment emails for application submission/status changes, employer information requests, interviews, organization reviews, support responses and team-access changes. The in-app inbox remains the authoritative copy.
+- New recruiter invitations email the one-use code when SMTP is configured. The owner still sees the code once so it can be shared privately if delivery is delayed.
 
 ## What still needs an external account
 
@@ -23,6 +25,7 @@ An email provider is the service that sends FairMatch's outgoing email. The owne
 3. Keep the private settings file out of source control. The entire data directory is already ignored.
 4. Restart the FairMatch backend so it reads the settings. Configuration presence enables the controls; it does not prove credentials or delivery are valid.
 5. With a real candidate account, request verification and check the actual inbox/spam folder. Confirm the code, then request a second code and verify that reuse and expiry are rejected.
+6. Submit an application or change its stage and confirm that the verified candidate receives both an in-app notification and a transactional email. Create a recruiter invitation and confirm its one-use code reaches the invited address.
 
 Email settings are Java properties: a literal backslash must be written as two backslashes. Use the provider's application-specific password or SMTP credential where required. No credentials are supplied in the example file.
 
@@ -44,7 +47,9 @@ HTTP Basic authentication is disabled by default. Existing integration tests exp
 | `frontend/src/components/fairmatch/fullstack-app.tsx` | Opens the dialog and revokes the server session before clearing browser state |
 | `backend/src/main/java/com/fairmatch/platform/AccountSecurityController.java` | HTTP endpoints and request validation |
 | `AccountSecurityService.java` in the same folder | Sessions, rate limits, challenge hashing, password updates and transactional code consumption |
-| `EmailQueue.java` and `MailDelivery.java` | Persisted delivery queue, retry leases and TLS SMTP |
+| `EmailQueue.java` and `MailDelivery.java` | Persisted delivery queue, retry leases, address/header validation and TLS SMTP |
+| `PlatformService.java` | Creates the in-app notification and queues the matching email only for the account's currently verified address |
+| `TeamService.java` | Queues owner-created recruiter invitations for the supplied address |
 | `AdminBootstrap.java` | Explicit first-install administrator setup |
 | `backend/src/main/java/com/fairmatch/BackendConfiguration.java` | JWT signature, issuer, expiry, saved-session and role validation |
 
@@ -54,7 +59,9 @@ Explain recovery like this: "The browser asks for a code. Java saves a hashed ch
 
 ## Verification evidence
 
-The backend has 27 passing tests: 15 recruitment/platform tests, eight account-security tests and four first-admin tests. The interview tests initially ran before MongoDB was started and then passed on rerun. SMTP is mocked in tests, so no external messages were sent.
+The backend suite has 59 passing tests, including nine account-security and mail integration cases. SMTP is mocked in tests, so validation never sends an external message.
+
+Frontend lint, TypeScript and production build pass. Browser sign-in and the security dialog were checked at a short viewport; clipped form panels were corrected and internal scrolling verified. The packaged-backend restart check passes for sessions, recruitment data and original PDF bytes. The student's five jobs and five applications remain, including candidate 14ae in Interview.
 
 Logs: `logs/security-backend-check.log`, `logs/security-interview-check.log`, `logs/security-bootstrap-check.log`, `logs/security-frontend-build.log`, `logs/fullstack-restart-result.json`.
 

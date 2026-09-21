@@ -10,7 +10,7 @@ import { Field, Panel, StatusBadge } from "./shared";
 type TeamMember = { id: string; name: string; email: string; role: string; status: string; version: number };
 type Invitation = { id: string; email: string; status: string; version: number; expiresAt: string };
 type Team = { canManage: boolean; organizationName: string; members: TeamMember[]; invitations: Invitation[] };
-type Created = { invitation: Invitation; code: string };
+type Created = { invitation: Invitation; code: string; emailQueued: boolean };
 
 export function TeamAccess({ auth }: { auth: string }) {
   const [team, setTeam] = useState<Team>();
@@ -69,7 +69,7 @@ export function TeamAccess({ auth }: { auth: string }) {
           </form>
           {created && <section className="fs-team-code fs-form" aria-label="New invitation">
             <h3>Invitation for {created.invitation.email}</h3>
-            <p>Ask your teammate to open FairMatch, choose Employer, then Join an organization. Give them this code and ask them to use the email above. The code is shown once and is not emailed automatically.</p>
+            <p>{created.emailQueued ? "FairMatch queued an invitation email. You can also share this one-use code privately if delivery is delayed." : "SMTP is not configured, so no email was sent. Ask your teammate to open FairMatch, choose Employer, then Join an organization, and privately give them this code."}</p>
             <Field label="Private invitation code"><Input readOnly value={created.code} autoComplete="off" onFocus={e => e.currentTarget.select()} /></Field>
             <p>Expires {new Date(created.invitation.expiresAt).toLocaleString()}.</p>
             <div className="fs-actions"><Button variant="outline" onClick={() => void navigator.clipboard.writeText(created.code).then(() => toast.success("Invitation code copied.")).catch(() => toast.error("Select and copy the code manually."))}>Copy code</Button><Button variant="ghost" onClick={() => setCreated(undefined)}>Hide code</Button></div>
