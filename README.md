@@ -20,6 +20,8 @@ Open PowerShell in the project folder (the folder containing this README), then 
 .\START_FAIRMATCH.cmd
 ```
 
+Run `SETUP_FAIRMATCH_AI.cmd` once before the first AI-enabled start. It installs Ollama and the Qwen3 4B Instruct model under `D:\FairMatch\Ollama`; the large model files do not use drive C:. Normal starts then launch the local Ollama API automatically. In Candidate > Documents, PDF text is extracted with PyPDF/Tesseract, Qwen turns it into page-linked structured suggestions, FairMatch rejects quotations it cannot locate in the extracted page, and the candidate must review and confirm the facts.
+
 Or double-click that file. The launcher starts/reuses MongoDB, MinIO, the Python document worker, Spring Boot and Next.js. Open http://127.0.0.1:3000/?workspace=employer. Running only the frontend does not start the other services.
 
 Double-click **STOP_FAIRMATCH.cmd** to stop the background services without deleting data. While the app is running, **BACKUP_FAIRMATCH.cmd** creates a verified private backup on the Desktop and restarts the app. **RESTORE_FAIRMATCH.cmd** extracts a backup to a new recovery folder without replacing current data. See **BACKUP_AND_RECOVERY_GUIDE.md** for the tested recovery procedure.
@@ -32,7 +34,7 @@ Read **PROJECT_DEMONSTRATION_GUIDE.md** for the current presentation script, arc
 
 **Candidate ranking:** Employer > Candidate ranking now automatically orders applications by explained text matches against the selected job requirements. Recruiters do not need to rate every candidate to get a first-pass order. A saved rubric supplies custom weights; otherwise requirements have equal weights. Private CV PDFs are excluded, but candidate-confirmed details submitted in an application are included. Optional human rubric assessments remain separate, with evidence quotes and history. Text match is not verified competence or an automatic hiring decision. See [CANDIDATE_RANKING_GUIDE.md](CANDIDATE_RANKING_GUIDE.md).
 
-**AI CV review plan:** The current extractor and ranking are deterministic; they must not be presented as an LLM. [AI_CV_REVIEW_PLAN.md](AI_CV_REVIEW_PLAN.md) describes an evidence-linked LLM extraction layer, local Ollama and cloud-provider choices, privacy constraints and the proposed structured output contract.
+**Local AI CV review:** Ollama runs Qwen3 4B Instruct locally after PyPDF/Tesseract extraction. It creates structured skills, courses, projects, experience and a work-focused summary with page numbers and source quotations. Java validates every cited quotation before showing it. The candidate must confirm suggestions, and deterministic ranking remains separate from the LLM. [AI_CV_REVIEW_PLAN.md](AI_CV_REVIEW_PLAN.md) documents the privacy and evidence design.
 
 **Team access:** An organization owner creates a one-use, email-bound recruiter invitation in Settings > Team & access. A teammate opens Employer > Join an organization on the same FairMatch installation and creates their own account. Recruiters can work on hiring records but cannot manage membership or business verification files. The owner can suspend and restore access; suspension revokes saved sessions. Invitations are shared manually and do not verify email inbox ownership. See **TEAM_ACCESS_GUIDE.md**.
 
@@ -68,7 +70,7 @@ npm.cmd run typecheck
 
 Before replacing a running build, stop only the FairMatch backend and frontend processes. Windows locks the running JAR, and Next.js reads its production build while serving. Then run `.\mvnw.cmd -DskipTests package` **from the backend folder**, `npm.cmd run build` **from the frontend folder**, and the root launcher again. Prefer the commands in **REBUILD_FAIRMATCH.ps1**, which performs the scoped stop, tests, build and restart.
 
-The latest full backend run has **55 passing tests** (`backend/target/surefire-reports`), including automatic ranking without manual ratings. Frontend lint, TypeScript and production compilation passed. The packaged app was restarted and both frontend and backend returned HTTP 200. Earlier isolated browser checks verified team access and ranking persistence. Eleven Python extraction/OCR/storage tests passed earlier. Complete the guide's manual rehearsal before the assessment.
+The latest full backend run has **58 passing tests** (`backend/target/surefire-reports`), including automatic ranking and validated local-AI output without manual ratings. Frontend lint and TypeScript checks passed; the packaged build is verified during the rebuild workflow. Twelve Python extraction/OCR/storage tests passed. Complete the guide's manual rehearsal before the assessment.
 
 Eight additional backup safety tests pass. A full cold-backup restore rehearsal opened copied MongoDB/MinIO stores on separate ports, matched database collection hashes/counts and downloaded both stored PDFs. See `logs/backup-restore-result.json`. CV extraction/confirmation, candidate privacy actions and persisted requirement reviews were also checked in the browser against a separate test database; see `logs/fullstack-ui-result.json`.
 
@@ -88,4 +90,4 @@ Employer > Applications > Review evidence records an assessment, exact submitted
 
 ## Business verification and drafts
 
-Read **ORGANIZATION_VERIFICATION_GUIDE.md** for employer uploads, administrator login/review and reopening job drafts. Private supporting files, current-document checks, decision history and version protection are connected to the backend. The earlier 39-test milestone and isolated browser draft-to-approval-to-publication rehearsal passed; the current suite has 55 passing tests.
+Read **ORGANIZATION_VERIFICATION_GUIDE.md** for employer uploads, administrator login/review and reopening job drafts. Private supporting files, current-document checks, decision history and version protection are connected to the backend. The earlier 39-test milestone and isolated browser draft-to-approval-to-publication rehearsal passed; the current suite has 58 passing tests.

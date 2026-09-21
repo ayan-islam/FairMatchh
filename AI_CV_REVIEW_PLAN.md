@@ -45,16 +45,19 @@ Official documentation: <https://ai.google.dev/gemini-api/docs/pricing>, <https:
 
 Official documentation: <https://huggingface.co/docs/inference-providers/pricing>
 
-## Proposed configuration
+## Installed configuration
 
 Secrets must be environment variables and must never be committed to GitHub.
 
 ```text
 FAIRMATCH_AI_PROVIDER=ollama
 FAIRMATCH_AI_BASE_URL=http://localhost:11434
-FAIRMATCH_AI_MODEL=<installed-model-name>
-FAIRMATCH_AI_API_KEY=<only-for-a-cloud-provider>
+FAIRMATCH_AI_MODEL=qwen3:4b-instruct
 ```
+
+On this laptop, both the Ollama application and model data live under `D:\FairMatch\Ollama`. `OLLAMA_NO_CLOUD=1` keeps the server in local-only mode. `START_FAIRMATCH.cmd` starts the local API and enables the Spring integration; no API key is used.
+
+The implemented Java service sends extracted page text to `/api/chat` with a JSON schema, temperature zero and an 8K working context. It accepts an AI item only when the claimed page exists and the supporting quotation can be found in that page after whitespace normalization. Invalid or unsupported suggestions are omitted. The displayed compact summary is rebuilt only from those accepted evidence items, so an unsupported free-form model summary is never trusted. Candidates see the model, page, quotation and extraction confidence and must explicitly copy and confirm facts before employers can receive compact highlights.
 
 ## Output schema
 

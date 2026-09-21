@@ -25,5 +25,9 @@ try {
     Wait-Process -Id $services[27018].ProcessId -Timeout 20 -ErrorAction SilentlyContinue
   }
   if ($services.ContainsKey(9000)) { Stop-Process -Id $services[9000].ProcessId; Wait-Process -Id $services[9000].ProcessId -Timeout 20 -ErrorAction SilentlyContinue }
+  $ollama = 'D:\FairMatch\Ollama\app\ollama.exe'
+  if (Test-Path -LiteralPath $ollama) {
+    & $ollama stop 'qwen3:4b-instruct' 2>$null | Out-Null
+  }
   Write-Host 'FairMatch is stopped. Your saved data is unchanged. Use START_FAIRMATCH.cmd to run it again.' -ForegroundColor Green
 } finally { $maintenance.Dispose() }

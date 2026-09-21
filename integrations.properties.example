@@ -23,3 +23,8 @@ fairmatch.bootstrap.admin-password=
 fairmatch.seed=false
 fairmatch.bootstrap.demo-enabled=false
 fairmatch.auth.basic-enabled=false
+
+# Local AI CV review. No API key is used; CV text stays on this computer.
+fairmatch.ai.enabled=false
+fairmatch.ai.base-url=http://127.0.0.1:11434
+fairmatch.ai.model=qwen3:4b-instruct

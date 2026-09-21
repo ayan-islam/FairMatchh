@@ -25,12 +25,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController @RequestMapping("/api/candidate/documents")
 class DocumentController {
-    private final PlatformService platform;private final MongoTemplate mongo;private final AuditService audit;private final ObjectMapper json;
+    private final PlatformService platform;private final MongoTemplate mongo;private final AuditService audit;private final ObjectMapper json;private final AiCvReviewService ai;
     private final HttpClient http=HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).connectTimeout(Duration.ofSeconds(3)).build();
-    DocumentController(PlatformService platform,MongoTemplate mongo,AuditService audit,ObjectMapper json){this.platform=platform;this.mongo=mongo;this.audit=audit;this.json=json;}
+    DocumentController(PlatformService platform,MongoTemplate mongo,AuditService audit,ObjectMapper json,AiCvReviewService ai){this.platform=platform;this.mongo=mongo;this.audit=audit;this.json=json;this.ai=ai;}
     record SourcePage(int number,String text,String method,boolean truncated){}
     record Suggestion(String field,String value,int page,int start,int end,String method){}
-    @Document("candidate_documents") record Resume(@Id String id,String ownerId,String filename,long bytes,String status,String text,Instant createdAt,List<SourcePage> pages,List<Suggestion> suggestions,List<String> warnings,Integer extractionVersion){}
+    @Document("candidate_documents") record Resume(@Id String id,String ownerId,String filename,long bytes,String status,String text,Instant createdAt,List<SourcePage> pages,List<Suggestion> suggestions,List<String> warnings,Integer extractionVersion,AiCvReviewService.Review aiReview,String aiStatus){}
     record CvHighlightsInput(@NotNull @Size(max=8) List<@NotBlank @Size(max=100) String> skills,
         @NotNull @Size(max=6) List<@NotBlank @Size(max=160) String> courses,
         @NotNull @Size(max=5) List<@NotBlank @Size(max=240) String> projects){}
@@ -67,22 +67,30 @@ class DocumentController {
         var pages=result.has("pages")?Arrays.asList(json.convertValue(result.get("pages"),SourcePage[].class)):List.<SourcePage>of();
         var suggestions=result.has("suggestions")?Arrays.asList(json.convertValue(result.get("suggestions"),Suggestion[].class)):List.<Suggestion>of();
         var warnings=result.has("warnings")?Arrays.asList(json.convertValue(result.get("warnings"),String[].class)):List.<String>of();
-        return new Resume(id,owner,name,bytes,result.get("status").asText(),result.get("text").asText(),created,pages,suggestions,warnings,result.path("extractionVersion").asInt(1));
+        var outcome=ai.review(pages);if(outcome.warning()!=null){var withAi=new ArrayList<>(warnings);withAi.add(outcome.warning());warnings=List.copyOf(withAi);}
+        return new Resume(id,owner,name,bytes,result.get("status").asText(),result.get("text").asText(),created,pages,suggestions,warnings,result.path("extractionVersion").asInt(1),outcome.review(),outcome.status());
     }
     @PostMapping("/{id}/extraction") Resume reextract(@PathVariable String id,@RequestParam(defaultValue="false") boolean ocr,Principal p) throws java.io.IOException {
         var old=owned(id,owner(p));
         var result=json.readTree(worker(id,"POST",null,"/extraction?ocr="+ocr));
         var saved=extracted(old.id(),old.ownerId(),old.filename(),old.bytes(),old.createdAt(),result);
         // Update only an existing owned document: a concurrent deletion must not resurrect its metadata.
-        var updated=mongo.findAndModify(Query.query(Criteria.where("_id").is(id).and("ownerId").is(old.ownerId())),new Update().set("status",saved.status()).set("text",saved.text()).set("pages",saved.pages()).set("suggestions",saved.suggestions()).set("warnings",saved.warnings()).set("extractionVersion",saved.extractionVersion()),org.springframework.data.mongodb.core.FindAndModifyOptions.options().returnNew(true),Resume.class);
+        var updated=mongo.findAndModify(Query.query(Criteria.where("_id").is(id).and("ownerId").is(old.ownerId())),new Update().set("status",saved.status()).set("text",saved.text()).set("pages",saved.pages()).set("suggestions",saved.suggestions()).set("warnings",saved.warnings()).set("extractionVersion",saved.extractionVersion()).set("aiReview",saved.aiReview()).set("aiStatus",saved.aiStatus()),org.springframework.data.mongodb.core.FindAndModifyOptions.options().returnNew(true),Resume.class);
         if(updated==null)throw new ApiException(HttpStatus.CONFLICT,"This document was removed. Refresh the list.");
         audit.record("platform","DOCUMENT_REEXTRACTED",id,"Candidate requested page-linked text extraction; profile unchanged",p.getName());return updated;
+    }
+    @PostMapping("/{id}/ai-review") Resume reviewWithAi(@PathVariable String id,Principal p){
+        var old=owned(id,owner(p));var outcome=ai.review(old.pages());
+        if(outcome.review()==null)throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE,outcome.warning()==null?"Local AI review is not configured.":outcome.warning());
+        var updated=mongo.findAndModify(Query.query(Criteria.where("_id").is(id).and("ownerId").is(old.ownerId())),new Update().set("aiReview",outcome.review()).set("aiStatus",outcome.status()),org.springframework.data.mongodb.core.FindAndModifyOptions.options().returnNew(true),Resume.class);
+        if(updated==null)throw new ApiException(HttpStatus.CONFLICT,"This document was removed. Refresh the list.");
+        audit.record("platform","DOCUMENT_AI_REVIEWED",id,"Local Ollama CV review created with "+outcome.review().model(),p.getName());return updated;
     }
     @PostMapping("/{id}/confirmation") @org.springframework.transaction.annotation.Transactional Resume confirm(@PathVariable String id,@Valid @RequestBody Confirmation r,Principal p){
         var old=owned(id,owner(p));var h=r.highlights()==null?new CvHighlightsInput(List.of(),List.of(),List.of()):r.highlights();
         var summary=new PlatformService.CvSummary(h.skills().stream().map(String::trim).distinct().toList(),h.courses().stream().map(String::trim).distinct().toList(),h.projects().stream().map(String::trim).distinct().toList(),Instant.now());
         platform.saveConfirmedCvProfile(old.ownerId(),r.profile(),summary);
-        var saved=new Resume(old.id(),old.ownerId(),old.filename(),old.bytes(),"Confirmed",old.text(),old.createdAt(),old.pages(),old.suggestions(),old.warnings(),old.extractionVersion());mongo.save(saved);audit.record("platform","DOCUMENT_PROFILE_CONFIRMED",id,"Candidate reviewed profile and compact CV highlights",p.getName());return saved;
+        var saved=new Resume(old.id(),old.ownerId(),old.filename(),old.bytes(),"Confirmed",old.text(),old.createdAt(),old.pages(),old.suggestions(),old.warnings(),old.extractionVersion(),old.aiReview(),old.aiStatus());mongo.save(saved);audit.record("platform","DOCUMENT_PROFILE_CONFIRMED",id,"Candidate reviewed profile and compact CV highlights",p.getName());return saved;
     }
     @DeleteMapping("/{id}") Map<String,Boolean> delete(@PathVariable String id,Principal p){var r=owned(id,owner(p));worker(id,"DELETE",null);mongo.remove(r);audit.record("platform","DOCUMENT_DELETED",id,"Candidate removed private CV",p.getName());return Map.of("deleted",true);}
 }

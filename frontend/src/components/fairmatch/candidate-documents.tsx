@@ -24,7 +24,21 @@ type Resume = {
   suggestions?: { field: "role" | "experience" | "education" | "skills" | "courses" | "projects"; value: string; page: number; start: number; end: number; method: string }[];
   warnings?: string[];
   extractionVersion?: number;
+  aiStatus?: string;
+  aiReview?: {
+    provider: string;
+    model: string;
+    promptVersion: string;
+    reviewedAt: string;
+    summary: string;
+    skills: AiEvidence[];
+    courses: AiEvidence[];
+    projects: AiEvidence[];
+    experience: AiEvidence[];
+    warnings: string[];
+  } | null;
 };
+type AiEvidence = { label: string; sourcePage: number; evidence: string; confidence: number };
 export function CandidateDocuments({
   auth,
   profile,
@@ -80,10 +94,25 @@ export function CandidateDocuments({
     setError("");
     try {
       const response = await fetch(`/api/candidate/documents/${document.id}/extraction?ocr=${ocr}`, {
-        method: "POST", headers: { Authorization: auth }, signal: AbortSignal.timeout(45000),
+        method: "POST", headers: { Authorization: auth }, signal: AbortSignal.timeout(300000),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "Extraction could not be refreshed.");
+      setReview(result);
+      setRevision(r => r + 1);
+    } catch (e) { setError((e as Error).message); }
+    finally { setBusy(false); }
+  }
+  async function runAiReview(document: Resume) {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/candidate/documents/${document.id}/ai-review`, {
+        method: "POST", headers: {Authorization: auth, "Content-Type":"application/json"}, body:"{}", signal:AbortSignal.timeout(300000),
+      });
+      const result = await response.json() as Resume & {message?:string};
+      if (!response.ok) throw new Error(result.message || "Qwen AI review could not be completed.");
       setReview(result);
       setRevision(r => r + 1);
     } catch (e) { setError((e as Error).message); }
@@ -121,6 +150,7 @@ export function CandidateDocuments({
         {documents.map((d) => (
           <Panel key={d.id} title={d.filename}>
             <StatusBadge>{d.status}</StatusBadge>
+            <StatusBadge>{d.aiReview ? "Qwen review ready" : d.aiStatus || "AI review pending"}</StatusBadge>
             <p>
               {Math.ceil(d.bytes / 1024)} KB ·{" "}
               {new Date(d.createdAt).toLocaleDateString()}
@@ -130,7 +160,8 @@ export function CandidateDocuments({
             </Button>
             <Button variant="outline" disabled={busy} onClick={() => void refreshExtraction(d)}>Refresh extraction</Button>
             <Button variant="outline" disabled={busy} onClick={() => void refreshExtraction(d, true)}>Read with OCR</Button>
-            <p className="fm-muted">Use OCR if the extracted text is missing or unreadable. Processing may take up to 30 seconds.</p>
+            <Button variant="outline" disabled={busy} onClick={() => void runAiReview(d)}>{d.aiReview ? "Refresh Qwen review" : "Run Qwen AI review"}</Button>
+            <p className="fm-muted">Use OCR if the extracted text is missing or unreadable. Extraction and local AI review can take several minutes on this laptop.</p>
             <Button
               variant="outline"
               onClick={async () => {
@@ -254,6 +285,24 @@ function ConfirmResume({
     setConfirmed(false);setError("");setSource(suggestion);
     setNotice("Suggestion copied to the editable form. Review it before confirming; your saved profile has not changed.");
   }
+  function showAiSource(item: AiEvidence) {
+    const page = resume.pages?.find(candidate => candidate.number === item.sourcePage);
+    const pattern=item.evidence.trim().split(/\s+/).map(token=>token.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("\\s+");
+    const match=page?.text.match(new RegExp(pattern,"i"));
+    const start=match?.index ?? -1;
+    setSource({field:"skills", value:item.evidence, page:item.sourcePage, start:Math.max(0,start), end:start < 0 ? 0 : start + (match?.[0].length || 0), method:"qwen-evidence"});
+  }
+  function applyAiItem(kind:"skills"|"courses"|"projects"|"experience", item:AiEvidence) {
+    if (kind === "skills") {
+      const updated=[...new Set([...highlightSkills.split(/\r?\n/).filter(Boolean),item.label])].slice(0,8);
+      setHighlightSkills(updated.join("\n"));
+      setForm({...form,skills:[...new Set([...form.skills,item.label])].slice(0,30)});
+    } else if (kind === "courses") setCourses([...new Set([...courses.split(/\r?\n/).filter(Boolean),item.label])].slice(0,6).join("\n"));
+    else if (kind === "projects") setProjects([...new Set([...projects.split(/\r?\n/).filter(Boolean),item.label])].slice(0,5).join("\n"));
+    else setForm({...form,experience:[form.experience,item.label].filter(Boolean).join("\n")});
+    setConfirmed(false); setError(""); showAiSource(item);
+    setNotice("AI suggestion copied. Check the highlighted CV quotation before confirming it.");
+  }
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -270,6 +319,19 @@ function ConfirmResume({
         </DialogHeader>
         <div className="fm-dialog-body fs-form">
           {!!resume.warnings?.length && <div role="note" className="fs-extraction-note"><strong>Check these pages</strong><ul>{resume.warnings.map((warning,i)=><li key={i}>{warning}</li>)}</ul></div>}
+          {resume.aiReview ? <section className="fs-ai-review" aria-label="Qwen AI CV review">
+            <div className="fs-ai-review-heading"><div><h3>Qwen AI review</h3><p>Generated locally with {resume.aiReview.model}. Every item below passed FairMatch&apos;s page-and-quotation validation.</p></div><StatusBadge>Candidate review required</StatusBadge></div>
+            {resume.aiReview.summary && <div className="fs-ai-summary"><strong>Work-focused summary</strong><p>{resume.aiReview.summary}</p></div>}
+            {(["skills","courses","projects","experience"] as const).map(kind => resume.aiReview![kind].length > 0 && <div className="fs-ai-group" key={kind}>
+              <h4>{({skills:"Skills",courses:"Courses and training",projects:"Projects",experience:"Experience"})[kind]}</h4>
+              {resume.aiReview![kind].map((item,index)=><article key={`${kind}-${index}`}>
+                <div><strong>{item.label}</strong><small>Page {item.sourcePage} · {Math.round(item.confidence*100)}% extraction confidence</small><blockquote>{item.evidence}</blockquote></div>
+                <div className="fs-actions"><Button type="button" variant="outline" onClick={()=>showAiSource(item)}>Check source</Button><Button type="button" variant="outline" onClick={()=>applyAiItem(kind,item)}>Use suggestion</Button></div>
+              </article>)}
+            </div>)}
+            {!!resume.aiReview.warnings?.length && <div role="note"><strong>AI cautions</strong><ul>{resume.aiReview.warnings.map((warning,index)=><li key={index}>{warning}</li>)}</ul></div>}
+            <p className="fm-muted">Qwen organizes extracted evidence; it does not verify qualifications, rank the candidate or make a hiring decision.</p>
+          </section> : <div className="fs-extraction-note"><strong>Qwen AI review: {resume.aiStatus || "Pending"}</strong><p>Close this window and choose Run Qwen AI review after Ollama is running. You can still review the deterministic extraction below.</p></div>}
           {!!resume.suggestions?.length && <section className="fs-suggestions" aria-label="Unverified profile suggestions">
             <h3>Suggestions from section headings</h3><p>Your current profile stays below. Choose a suggestion only after checking its page.</p>
             {resume.suggestions.map((suggestion,i)=><article key={i}>

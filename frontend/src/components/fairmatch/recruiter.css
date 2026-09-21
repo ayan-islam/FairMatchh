@@ -1587,6 +1587,16 @@
 .fs-cv-highlight-editor { border: 1px solid #dbe7e5; border-radius: 8px; padding: 16px; background: #f9fcfb; }
 .fs-cv-highlight-editor h3 { font-size: 15px; font-weight: 700; color: #143343; }
 .fs-cv-highlight-editor > p { font-size: 12px; color: #60708a; margin: 6px 0 14px; }
+.fs-ai-review { border: 1px solid #b9ded7; border-radius: 10px; background: #f5fbfa; padding: 16px; }
+.fs-ai-review-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.fs-ai-review h3, .fs-ai-review h4 { margin: 0; color: #143343; }
+.fs-ai-review-heading p, .fs-ai-review .fm-muted { margin: 4px 0 0; color: #60708a; font-size: 12px; line-height: 1.5; }
+.fs-ai-summary, .fs-ai-group { margin-top: 14px; padding-top: 14px; border-top: 1px solid #dcecea; }
+.fs-ai-summary p { margin: 6px 0 0; color: #354b5b; line-height: 1.55; }
+.fs-ai-group h4 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; }
+.fs-ai-group article { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 16px; padding: 12px 0; border-bottom: 1px solid #e4efed; }
+.fs-ai-group article small { display: block; margin-top: 3px; color: #60708a; }
+.fs-ai-group blockquote { margin: 8px 0 0; padding: 8px 10px; border-left: 3px solid #66bdb2; background: #fff; color: #354b5b; font-size: 12px; }
 .fm-subheading {
   font-size: 14px;
   font-weight: 650;
@@ -2036,6 +2046,8 @@
   .fm-cv-comparison-grid { grid-template-columns: 1fr; }
   .fm-cv-comparison-side + .fm-cv-comparison-side { border-left: 0; border-top: 1px solid #e3edeb; }
   .fm-cv-comparison-header { flex-direction: column; }
+  .fs-ai-review-heading { flex-direction: column; }
+  .fs-ai-group article { grid-template-columns: 1fr; }
   .fm-requirements > div {
     flex-wrap: wrap;
   }

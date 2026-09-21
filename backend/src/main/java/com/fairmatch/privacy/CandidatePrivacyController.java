@@ -72,7 +72,7 @@ class CandidatePrivacyController {
         var applications = read("applications", owned, "jobId","stage","appliedAt","role","experience","education","skills","example","availability","location","cvSummary","consentVersion","name","normalizedContact");
         var applicationIds = applications.stream().map(d -> d.getString("_id")).toList();
         var body = new LinkedHashMap<String,Object>();
-        body.put("schemaVersion", 1);
+        body.put("schemaVersion", 2);
         body.put("exportStartedAt", startedAt);
         body.put("account", account.view());
         body.put("accountCreatedAt", account.createdAt());
@@ -84,7 +84,7 @@ class CandidatePrivacyController {
         body.put("interviews", read("interviews",Criteria.where("candidateId").in(applicationIds),"candidateId","jobId","date","time","format","location","status","cancellationReason"));
         body.put("notifications", read("notifications",owned,"title","message","reference","createdAt","read"));
         body.put("supportCases", read("support_cases",owned,"subject","category","reference","status","detail","response","createdAt","version"));
-        body.put("documents", read("candidate_documents",owned,"filename","bytes","status","text","createdAt","extractionVersion","warnings","pages.number","pages.text","pages.method","pages.truncated","suggestions.field","suggestions.value","suggestions.page","suggestions.start","suggestions.end","suggestions.method"));
+        body.put("documents", read("candidate_documents",owned,"filename","bytes","status","text","createdAt","extractionVersion","warnings","pages.number","pages.text","pages.method","pages.truncated","suggestions.field","suggestions.value","suggestions.page","suggestions.start","suggestions.end","suggestions.method","aiStatus","aiReview.provider","aiReview.model","aiReview.promptVersion","aiReview.reviewedAt","aiReview.summary","aiReview.skills","aiReview.courses","aiReview.projects","aiReview.experience","aiReview.warnings"));
         body.put("scopeNotes",List.of(
             "Contains records linked to this signed-in candidate account. Legacy anonymous applications are not matched by email.",
             "Original CV files are downloaded separately from Documents. This JSON includes document metadata and extracted text.",

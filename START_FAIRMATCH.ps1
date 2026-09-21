@@ -29,6 +29,21 @@ $java = Join-Path $projectRoot 'tools\jdk-21.0.8+9\bin\java.exe'
 $mongo = Join-Path $env:LOCALAPPDATA 'Programs\MongoDB\Server\8.0\bin\mongod.exe'
 $node = (Get-Command node.exe).Source
 foreach ($runtime in @($java,$mongo)) { if (!(Test-Path -LiteralPath $runtime)) { throw "Required runtime missing: $runtime" } }
+$ollamaRoot = 'D:\FairMatch\Ollama'
+$ollama = Join-Path $ollamaRoot 'app\ollama.exe'
+$env:OLLAMA_MODELS = Join-Path $ollamaRoot 'models'
+$env:OLLAMA_NO_CLOUD = '1'
+$env:OLLAMA_CONTEXT_LENGTH = '8192'
+$env:FAIRMATCH_AI_ENABLED = 'true'
+$env:FAIRMATCH_AI_BASE_URL = 'http://127.0.0.1:11434'
+$env:FAIRMATCH_AI_MODEL = 'qwen3:4b-instruct'
+if (!(Test-Path -LiteralPath $ollama)) { throw 'Local AI is not installed. Run SETUP_FAIRMATCH_AI.ps1 once, then start FairMatch again.' }
+if (!(Listening 11434)) {
+  Start-Process -FilePath $ollama -ArgumentList @('serve') -WorkingDirectory (Split-Path $ollama) -WindowStyle Hidden -RedirectStandardOutput "$logs\ollama.log" -RedirectStandardError "$logs\ollama-error.log" | Out-Null
+}
+Wait-Url 'http://127.0.0.1:11434/api/tags'
+$installedModels = (Invoke-RestMethod -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 5).models.name
+if ($installedModels -notcontains 'qwen3:4b-instruct') { throw 'Qwen 4B is not downloaded. Run SETUP_FAIRMATCH_AI.ps1 while connected to the internet.' }
 $dbPath = Join-Path $projectRoot 'data\mongo'
 New-Item -ItemType Directory -Force -Path $dbPath | Out-Null
 if (!(Assert-Owner 27018 'fairmatch-rs')) {
