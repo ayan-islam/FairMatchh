@@ -24,9 +24,9 @@ Run `SETUP_FAIRMATCH_AI.cmd` once before the first AI-enabled start. It installs
 
 Or double-click that file. The launcher starts/reuses MongoDB, MinIO, the Python document worker, Spring Boot and Next.js. Open http://127.0.0.1:3000/?workspace=employer. Running only the frontend does not start the other services.
 
-Double-click **STOP_FAIRMATCH.cmd** to stop the background services without deleting data. While the app is running, **BACKUP_FAIRMATCH.cmd** creates a verified private backup on the Desktop and restarts the app. **RESTORE_FAIRMATCH.cmd** extracts a backup to a new recovery folder without replacing current data. See **BACKUP_AND_RECOVERY_GUIDE.md** for the tested recovery procedure.
+Double-click **STOP_FAIRMATCH.cmd** to stop the background services without deleting data. While the app is running, **BACKUP_FAIRMATCH.cmd** creates a verified private backup on the Desktop and restarts the app. **RESET_FAIRMATCH.cmd** requires typing `RESET`, creates that verified backup, then removes every account and dependent database record while preserving SMTP configuration and project files. **RESTORE_FAIRMATCH.cmd** extracts a backup to a new recovery folder without replacing current data. See **BACKUP_AND_RECOVERY_GUIDE.md** for the tested recovery procedure.
 
-Existing employer, administrator and candidate accounts remain in the local database. New candidates can register in the Candidate workspace. New organization owners can register as employers, submit business evidence and obtain an administrator review before publishing. An organization owner can invite additional recruiters from **Settings > Team & access**.
+The local database starts without sample accounts after a reset. New candidates can register in the Candidate workspace. New organization owners can register as employers, submit business evidence and obtain an administrator review before publishing. Create the first administrator through the documented one-time bootstrap settings. An organization owner can invite additional recruiters from **Settings > Team & access**.
 
 Read **PROJECT_DEMONSTRATION_GUIDE.md** for the current presentation script, architecture, codebase walkthrough and viva questions. The original Desktop project also includes a rendered **FairMatch_Project_Demonstration_Guide.pdf**; generated PDFs are omitted from the GitHub source snapshot. **TEAM_ACCESS_GUIDE.md** explains recruiter invitations and permissions. **FULLSTACK_PROGRESS.md** in the Desktop project records implemented and remaining scope. Older guides describe earlier milestones.
 
@@ -90,4 +90,4 @@ Employer > Applications > Review evidence records an assessment, exact submitted
 
 ## Business verification and drafts
 
-Read **ORGANIZATION_VERIFICATION_GUIDE.md** for employer uploads, administrator login/review and reopening job drafts. Private supporting files, current-document checks, decision history and version protection are connected to the backend. The earlier 39-test milestone and isolated browser draft-to-approval-to-publication rehearsal passed; the current suite has 58 passing tests.
+Read **ORGANIZATION_VERIFICATION_GUIDE.md** for employer uploads, administrator login/review and reopening job drafts. Private supporting files, current-document checks, decision history and version protection are connected to the backend. The earlier 39-test milestone and isolated browser draft-to-approval-to-publication rehearsal passed; the current suite has 59 passing tests.
