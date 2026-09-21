@@ -16,7 +16,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.assertj.core.api.Assertions.*;
 
-@SpringBootTest(properties={"fairmatch.seed=false","fairmatch.bootstrap.demo-enabled=true","fairmatch.mail.dispatch=false"}) @AutoConfigureMockMvc
+@SpringBootTest(properties={"fairmatch.seed=false","fairmatch.bootstrap.demo-enabled=true","fairmatch.bootstrap.admin-enabled=false","fairmatch.admin.password=FairMatchAdmin!2026","fairmatch.mail.dispatch=false"}) @AutoConfigureMockMvc
 class PlatformFeaturesTest {
     static final String DATABASE="fairmatch_platform_test_"+UUID.randomUUID().toString().replace("-","");
     static final java.util.concurrent.atomic.AtomicInteger CLIENT_NUMBER=new java.util.concurrent.atomic.AtomicInteger(10);
@@ -40,13 +40,14 @@ class PlatformFeaturesTest {
 
     @Test void jwtRolesAndAccountOwnershipAreEnforced() throws Exception {
         var candidate=register("CANDIDATE");var token=candidate.get("token").asText();var username=candidate.at("/user/username").asText();
-        assertThat(username).matches("[0-9]{10}");
+        assertThat(username).startsWith("qa_");
         assertThat(login(username,"TestPassword!123")).isNotBlank();
         call(get("/api/account/me"),token,null,200);call(get("/api/employer/jobs"),token,null,403);call(get("/api/admin/organizations"),token,null,403);
         mvc.perform(get("/api/account/me").header("Authorization","Bearer "+token.substring(0,token.lastIndexOf('.')+1)+"AAAA")).andExpect(status().isUnauthorized());
         call(post("/api/public/auth/login"),null,Map.of("username",username,"password","incorrect"),401);
         call(post("/api/public/auth/register"),null,Map.of("username","illegal_admin","contact","illegal@example.test","name","Invalid","password","TestPassword!123","role","ADMIN"),400);
         call(post("/api/public/auth/register"),null,Map.of("username","123456","contact","numeric-employer@example.test","name","Invalid employer username","password","TestPassword!123","role","EMPLOYER","organizationName","QA Engineering"),400);
+        call(post("/api/public/auth/register"),null,Map.of("username","123456","contact","numeric-candidate@example.test","name","Invalid candidate username","password","TestPassword!123","role","CANDIDATE","organizationName",""),400);
         var second=register("CANDIDATE").get("token").asText();
         assertThat(call(get("/api/candidate/profile"),second,null,200)).isEqualTo(call(get("/api/candidate/profile"),second,null,200));
         assertThat(call(get("/api/candidate/drafts/unsaved"),second,null,200)).isEqualTo(call(get("/api/candidate/drafts/unsaved"),second,null,200));

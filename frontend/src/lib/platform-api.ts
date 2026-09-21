@@ -88,7 +88,7 @@ export const platformApi = {
       password,
     }),
   register: (input: {
-    username?: string;
+    username: string;
     password: string;
     contact: string;
     name: string;

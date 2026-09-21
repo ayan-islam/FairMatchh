@@ -322,12 +322,7 @@ function AccountForm({
       }
       setPassword("");
       onSession(session.token);
-      if (register && workspace === "candidate") {
-        toast.success("Candidate account created", {
-          description: `Your Candidate ID is ${session.user.username}. Save this ID for future sign-ins.`,
-          duration: 15000,
-        });
-      } else toast.success(register ? "Account created." : "Signed in.");
+      toast.success(register ? "Account created." : "Signed in.");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -344,25 +339,21 @@ function AccountForm({
         records, clear decisions.
       </p>
       <form onSubmit={submit}>
-        {(!register || workspace !== "candidate") && (
-          <Field
-            label={workspace === "candidate" ? "Candidate ID" : workspace === "admin" ? "Administrator username" : "Employer username"}
-            hint={register && workspace === "employer" ? "Start with a letter; use 3–60 letters, numbers, dots, underscores or hyphens." : workspace === "candidate" ? "Use the numeric Candidate ID issued when you registered." : undefined}
-          >
-            <Input
-              required
-              minLength={register && workspace === "employer" ? 3 : undefined}
-              maxLength={60}
-              pattern={register && workspace === "employer" ? "[A-Za-z][A-Za-z0-9._-]{2,59}" : undefined}
-              title={register && workspace === "employer" ? "Start with a letter and use 3–60 letters, numbers, dots, underscores or hyphens." : undefined}
-              inputMode={workspace === "candidate" ? "numeric" : undefined}
-              placeholder={workspace === "candidate" ? "Example: 2026000001" : undefined}
-              autoComplete="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-          </Field>
-        )}
+        <Field
+          label={workspace === "candidate" ? "Candidate username" : workspace === "admin" ? "Administrator username" : "Employer username"}
+          hint={register ? "Start with a letter; use 3–60 letters, numbers, dots, underscores or hyphens." : undefined}
+        >
+          <Input
+            required
+            minLength={register ? 3 : undefined}
+            maxLength={60}
+            pattern={register ? "[A-Za-z][A-Za-z0-9._-]{2,59}" : undefined}
+            title={register ? "Start with a letter and use 3–60 letters, numbers, dots, underscores or hyphens." : undefined}
+            autoComplete="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+        </Field>
         <Field label="Password">
           <Input
             required
@@ -376,9 +367,6 @@ function AccountForm({
         </Field>
         {register && (
           <>
-            {workspace === "candidate" && (
-              <p className="fs-login-note">A unique 10-digit Candidate ID will be created automatically. You will use it with your password to sign in.</p>
-            )}
             <Field label="Your name">
               <Input
                 required

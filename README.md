@@ -2,11 +2,11 @@
 
 ## Sign-in model
 
-- **Candidates:** registration creates a unique 10-digit Candidate ID automatically. Candidates sign in with that ID and their password. The ID is shown in the candidate workspace.
-- **Employers:** owners and invited recruiters use a username that starts with a letter, plus their password.
+- **Candidates:** choose a username during registration and sign in with that username and password.
+- **Employers:** owners and invited recruiters choose a username and sign in with that username and password.
 - **Administrators:** administrator usernames are provisioned by the platform owner; public administrator registration is disabled.
 
-Existing accounts created before this rule remain valid so saved project data is not locked out.
+Candidate and employer usernames start with a letter and contain 3–60 letters, numbers, dots, underscores or hyphens.
 
 ## Application drafts and tracking
 

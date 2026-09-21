@@ -145,7 +145,7 @@ export function CandidateWorkspace({
           <p className="fm-eyebrow">CANDIDATE WORKSPACE</p>
           <h1>Hello, {user.name}</h1>
           <p>Your profile, applications and updates in one place.</p>
-          <p className="fm-muted">Candidate ID: <strong>{user.username}</strong></p>
+          <p className="fm-muted">Username: <strong>{user.username}</strong></p>
         </div>
         <Button variant="outline" onClick={() => setRevision((r) => r + 1)}>
           Refresh my data
