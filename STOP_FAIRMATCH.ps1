@@ -27,7 +27,12 @@ try {
   if ($services.ContainsKey(9000)) { Stop-Process -Id $services[9000].ProcessId; Wait-Process -Id $services[9000].ProcessId -Timeout 20 -ErrorAction SilentlyContinue }
   $ollama = 'D:\FairMatch\Ollama\app\ollama.exe'
   if (Test-Path -LiteralPath $ollama) {
-    & $ollama stop 'qwen3:4b-instruct' 2>$null | Out-Null
+    # Ollama returns a non-zero result when the model is already unloaded. Stopping
+    # the optional model is best effort and must not turn a successful app stop into
+    # a PowerShell NativeCommandError.
+    $null = Start-Process -FilePath $ollama -ArgumentList @('stop','qwen3:4b-instruct') -Wait -PassThru -WindowStyle Hidden `
+      -RedirectStandardOutput (Join-Path $projectRoot 'logs\ollama-stop.log') `
+      -RedirectStandardError (Join-Path $projectRoot 'logs\ollama-stop-error.log')
   }
   Write-Host 'FairMatch is stopped. Your saved data is unchanged. Use START_FAIRMATCH.cmd to run it again.' -ForegroundColor Green
 } finally { $maintenance.Dispose() }
