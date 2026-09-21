@@ -1585,6 +1585,7 @@
 .fm-cv-skill-list span { display: inline-block; border: 1px solid #cde5e1; border-radius: 5px; background: #edf8f6; color: #075f58; font-size: 12px; padding: 4px 7px; }
 .fm-cv-comparison-note { padding: 11px 18px 14px; border-top: 1px solid #e3edeb; margin: 0; }
 .fs-cv-highlight-editor { border: 1px solid #dbe7e5; border-radius: 8px; padding: 16px; background: #f9fcfb; }
+.fm-form-key { margin: 0; padding: 10px 12px; border: 1px solid #dbe7e5; border-radius: 8px; background: #f7faf9; color: #52677d; font-size: 12px; }
 .fs-cv-highlight-editor h3 { font-size: 15px; font-weight: 700; color: #143343; }
 .fs-cv-highlight-editor > p { font-size: 12px; color: #60708a; margin: 6px 0 14px; }
 .fs-ai-review { border: 1px solid #b9ded7; border-radius: 10px; background: #f5fbfa; padding: 16px; }

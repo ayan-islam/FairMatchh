@@ -334,6 +334,7 @@ function ConfirmResume({
           </DialogDescription>
         </DialogHeader>
         <div className="fm-dialog-body fs-form">
+          <p className="fm-form-key"><b className="fm-required" aria-hidden="true">*</b> Required fields must be completed. Fields labelled Optional may be left blank.</p>
           {!!resume.warnings?.length && <div role="note" className="fs-extraction-note"><strong>Check these pages</strong><ul>{resume.warnings.map((warning,i)=><li key={i}>{warning}</li>)}</ul></div>}
           {resume.aiReview ? <section className="fs-ai-review" aria-label="Qwen AI CV review">
             <div className="fs-ai-review-heading"><div><h3>Qwen AI review</h3><p>Generated locally with {resume.aiReview.model}. Every item below passed FairMatch&apos;s page-and-quotation validation.</p></div><StatusBadge>Candidate review required</StatusBadge></div>
@@ -377,6 +378,7 @@ function ConfirmResume({
           {(["role", "experience", "education"] as const).map((k) => (
             <Field
               key={k}
+              optional
               label={
                 {
                   role: "Current or recent position",
@@ -397,8 +399,10 @@ function ConfirmResume({
               />
             </Field>
           ))}
-          <Field label="Confirmed skills (comma separated)">
+          <Field required label="Confirmed skills (comma separated)" hint="Enter at least one and at most 30 skills; separate each skill with a comma.">
             <Input
+              required
+              aria-required="true"
               value={form.skills.join(",")}
               onChange={(e) => {
                 setForm({ ...form, skills: e.target.value.split(",") });
@@ -409,9 +413,9 @@ function ConfirmResume({
           <section className="fs-cv-highlight-editor" aria-label="Compact CV highlights">
             <h3>Compact CV highlights</h3>
             <p>Keep only the most relevant items. These are saved after your review and shared only if you opt in while applying. One item per line; remove names, contact details and unrelated personal information.</p>
-            <Field label="Important skills (up to 8)"><Textarea value={highlightSkills} rows={3} onChange={e=>{setHighlightSkills(e.target.value);setConfirmed(false);}} placeholder="One skill per line"/></Field>
-            <Field label="Relevant courses or training (up to 6)"><Textarea value={courses} rows={3} onChange={e=>{setCourses(e.target.value);setConfirmed(false);}} placeholder="One course per line"/></Field>
-            <Field label="Relevant projects (up to 5)"><Textarea value={projects} rows={3} onChange={e=>{setProjects(e.target.value);setConfirmed(false);}} placeholder="One project and your contribution per line"/></Field>
+            <Field optional label="Important skills (up to 8)" hint="Optional highlights for applications where you choose to share them."><Textarea value={highlightSkills} rows={3} onChange={e=>{setHighlightSkills(e.target.value);setConfirmed(false);}} placeholder="One skill per line"/></Field>
+            <Field optional label="Relevant courses or training (up to 6)"><Textarea value={courses} rows={3} onChange={e=>{setCourses(e.target.value);setConfirmed(false);}} placeholder="One course per line"/></Field>
+            <Field optional label="Relevant projects (up to 5)"><Textarea value={projects} rows={3} onChange={e=>{setProjects(e.target.value);setConfirmed(false);}} placeholder="One project and your contribution per line"/></Field>
           </section>
           <p>
             Keep names and contact details out of the evidence fields used for
@@ -419,11 +423,13 @@ function ConfirmResume({
           </p>
           <label>
             <input
+              required
+              aria-required="true"
               type="checkbox"
               checked={confirmed}
               onChange={(e) => setConfirmed(e.target.checked)}
             />{" "}
-            I reviewed these profile fields and confirm they are accurate.
+            I reviewed these profile fields and confirm they are accurate.<b className="fm-required" aria-hidden="true">*</b>
           </label>
           {error && (
             <p role="alert" className="fm-error">
@@ -432,12 +438,16 @@ function ConfirmResume({
           )}
         </div>
         <Button
-          disabled={busy || !confirmed}
+          disabled={busy}
           onClick={async () => {
             setBusy(true);
             setError("");
             try {
               const lines=(value:string,max:number,length:number,label:string)=>{const items=[...new Set(value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean))];if(items.length>max||items.some(item=>item.length>length))throw new Error(`${label}: use at most ${max} lines, each no longer than ${length} characters.`);return items;};
+              const profileSkills=[...new Set(form.skills.map(skill=>skill.trim()).filter(Boolean))];
+              if(profileSkills.length===0)throw new Error("Confirmed skills is required. Enter at least one skill before saving.");
+              if(profileSkills.length>30||profileSkills.some(skill=>skill.length>100))throw new Error("Confirmed skills must contain at most 30 skills, with no skill longer than 100 characters.");
+              if(!confirmed)throw new Error("You must confirm that you reviewed the profile fields before saving.");
               await request(
                 `candidate/documents/${resume.id}/confirmation`,
                 "POST",
@@ -446,7 +456,7 @@ function ConfirmResume({
                     role: form.role,
                     experience: form.experience,
                     education: form.education,
-                    skills: form.skills.map((s) => s.trim()).filter(Boolean),
+                    skills: profileSkills,
                   },
                   highlights: {
                     skills: lines(highlightSkills,8,100,"Important skills"),
