@@ -390,11 +390,12 @@ export function CandidateWorkspace({
                 }
               />
             </Field>
-            <Field label="Skills (comma separated)" optional>
-              <Input
-                value={profile.skills.join(",")}
+            <Field label="Skills" optional hint="Enter one skill per line.">
+              <Textarea
+                rows={5}
+                value={profile.skills.join("\n")}
                 onChange={(e) =>
-                  setProfile({ ...profile, skills: e.target.value.split(",") })
+                  setProfile({ ...profile, skills: e.target.value.split(/\r?\n|,/g) })
                 }
               />
             </Field>
@@ -829,12 +830,13 @@ function ApplicationForm({
               )}
             </Field>
           ))}
-          <Field label="Skills (comma separated)" required error={fieldErrors.skills} hint="Add 1–20 job-relevant skills, separated by commas.">
-            <Input
+          <Field label="Skills" required error={fieldErrors.skills} hint="Add 1–20 job-relevant skills, one skill per line.">
+            <Textarea
               required
-              value={form.skills.join(",")}
+              rows={6}
+              value={form.skills.join("\n")}
               onChange={(e) =>
-                setForm({ ...form, skills: e.target.value.split(",") })
+                setForm({ ...form, skills: e.target.value.split(/\r?\n|,/g) })
               }
             />
           </Field>

@@ -399,13 +399,14 @@ function ConfirmResume({
               />
             </Field>
           ))}
-          <Field required label="Confirmed skills (comma separated)" hint="Enter at least one and at most 30 skills; separate each skill with a comma.">
-            <Input
+          <Field required label="Confirmed skills" hint="Enter at least one and at most 30 skills, one skill per line.">
+            <Textarea
               required
               aria-required="true"
-              value={form.skills.join(",")}
+              rows={6}
+              value={form.skills.join("\n")}
               onChange={(e) => {
-                setForm({ ...form, skills: e.target.value.split(",") });
+                setForm({ ...form, skills: e.target.value.split(/\r?\n|,/g) });
                 setConfirmed(false);
               }}
             />
