@@ -32,6 +32,37 @@
 .fs-heading p {
   color: #60708a;
 }
+.fs-account-context {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  padding: 15px 18px;
+  border: 1px solid #dce7e7;
+  border-radius: 10px;
+  background: #f7faf9;
+}
+.fs-account-context .fm-eyebrow { margin-bottom: 5px !important; }
+.fs-account-context strong, .fs-account-context span { display: block; }
+.fs-account-context > div > strong { font-size: 16px; }
+.fs-account-context span { margin-top: 3px; color: #60708a; font-size: 12px; }
+.fs-onboarding {
+  display: grid;
+  grid-template-columns: minmax(220px, .8fr) minmax(0, 1.6fr) auto;
+  align-items: center;
+  gap: 22px;
+  margin: 0 0 24px;
+  padding: 20px 22px;
+  border: 1px solid #cde4df;
+  border-radius: 11px;
+  background: #f1f8f6;
+}
+.fs-onboarding h2 { margin: 0 0 6px; font-size: 18px; font-weight: 650; }
+.fs-onboarding p { color: #526b7f; font-size: 13px; line-height: 1.55; }
+.fs-onboarding ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.fs-onboarding li { display: flex; align-items: flex-start; gap: 9px; color: #29445a; font-size: 12px; line-height: 1.45; }
+.fs-onboarding li strong { display: grid; flex: 0 0 25px; place-items: center; width: 25px; height: 25px; border-radius: 50%; background: #d7eee9; color: #00776f; }
 .fs-tabs {
   display: flex;
   gap: 10px;
@@ -187,6 +218,8 @@
   .fs-tabs button {
     font-size: 12px;
   }
+  .fs-onboarding { grid-template-columns: 1fr; padding: 18px; }
+  .fs-onboarding ol { grid-template-columns: 1fr; }
   .fm-live-bar {
     position: relative;
     flex-wrap: wrap;

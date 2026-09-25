@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Field, Panel, StatusBadge, EmptyState } from "./shared";
+import { Field, Panel, StatusBadge, EmptyState, PageHeading } from "./shared";
 import {
   platformApi,
   type User,
@@ -44,6 +44,16 @@ const emptyProfile: Profile = {
   education: "",
   skills: [],
 };
+const candidatePageCopy: Record<string, { eyebrow: string; title: string; description: string }> = {
+  Jobs: { eyebrow: "SHARED OPPORTUNITIES", title: "Jobs from your links", description: "Only jobs you opened from an employer's shared link appear here." },
+  "My applications": { eyebrow: "APPLICATION TRACKER", title: "My applications", description: "See each application, its current hiring stage and the employer's latest update." },
+  Profile: { eyebrow: "REUSABLE INFORMATION", title: "Candidate profile", description: "Save accurate experience and skills so future applications are quicker to complete." },
+  Documents: { eyebrow: "PRIVATE DOCUMENTS", title: "CV and extracted evidence", description: "Upload a CV, review extracted details and choose what you share with employers." },
+  Interviews: { eyebrow: "SCHEDULE", title: "My interviews", description: "Review upcoming and past interview details for your applications." },
+  Notifications: { eyebrow: "UPDATES", title: "Notifications", description: "Read hiring-stage changes, interview updates and requests from employers." },
+  Support: { eyebrow: "HELP", title: "Support and review requests", description: "Ask for help, report a concern or request a review of an application decision." },
+  Privacy: { eyebrow: "YOUR DATA", title: "Privacy controls", description: "Review how your information is stored, shared and removed." },
+};
 export function CandidateWorkspace({
   auth,
   user,
@@ -69,6 +79,7 @@ export function CandidateWorkspace({
   const [support, setSupport] = useState(false);
   const [withdraw, setWithdraw] = useState<OwnApplication | null>(null);
   const [shareTarget, setShareTarget] = useState<OwnApplication | null>(null);
+  const [showGettingStarted, setShowGettingStarted] = useState(true);
   const [caseForm, setCaseForm] = useState({
     subject: "",
     category: "Candidate appeal",
@@ -140,16 +151,12 @@ export function CandidateWorkspace({
   );
   return (
     <main className="fs-workspace" id="main-content">
-      <div className="fs-heading">
+      <div className="fs-account-context">
         <div>
           <p className="fm-eyebrow">CANDIDATE WORKSPACE</p>
-          <h1>Hello, {user.name}</h1>
-          <p>Your profile, applications and updates in one place.</p>
-          <p className="fm-muted">Username: <strong>{user.username}</strong></p>
+          <strong>{user.name}</strong>
+          <span>Signed in as {user.username}</span>
         </div>
-        <Button variant="outline" onClick={() => setRevision((r) => r + 1)}>
-          Refresh my data
-        </Button>
       </div>
       <nav className="fs-tabs" aria-label="Candidate pages">
         {[
@@ -165,6 +172,7 @@ export function CandidateWorkspace({
           <Button
             key={t}
             variant={tab === t ? "default" : "outline"}
+            aria-current={tab === t ? "page" : undefined}
             onClick={() => setTab(t)}
           >
             {t}
@@ -174,6 +182,27 @@ export function CandidateWorkspace({
           </Button>
         ))}
       </nav>
+      <PageHeading
+        eyebrow={candidatePageCopy[tab].eyebrow}
+        title={candidatePageCopy[tab].title}
+        description={candidatePageCopy[tab].description}
+        actions={<Button variant="outline" disabled={busy} onClick={() => setRevision((r) => r + 1)}>Refresh this page</Button>}
+      />
+      {tab === "Jobs" && showGettingStarted && (
+        <section className="fs-onboarding" aria-labelledby="candidate-getting-started">
+          <div>
+            <p className="fm-eyebrow">GETTING STARTED</p>
+            <h2 id="candidate-getting-started">Apply with confidence</h2>
+            <p>Follow these steps once, then track every saved application from this workspace.</p>
+          </div>
+          <ol>
+            <li><strong>1</strong><span>Open the job link shared by an employer.</span></li>
+            <li><strong>2</strong><span>Review your profile or upload a CV in Documents.</span></li>
+            <li><strong>3</strong><span>Submit the application and follow its hiring stages.</span></li>
+          </ol>
+          <Button variant="ghost" onClick={() => setShowGettingStarted(false)}>Hide this guide</Button>
+        </section>
+      )}
       {tab === "Privacy" && <CandidatePrivacy auth={auth} />}
       {error && (
         <p className="fm-error" role="alert">
@@ -184,14 +213,10 @@ export function CandidateWorkspace({
         <>
           {linkedJob ? (
             <div className="fs-linked-job-heading">
-              <h2>Job from your link</h2>
-              <p>This page shows the position you opened. Your profile and saved applications are available in the tabs above.</p>
+              <strong>Showing the job from your link</strong>
+              <p>Other jobs remain hidden. Your profile and saved applications are available in the tabs above.</p>
             </div>
           ) : <>
-            <div className="fs-linked-job-heading">
-              <h2>Jobs from your links</h2>
-              <p>Only positions you opened from an employer&apos;s shared link are saved here.</p>
-            </div>
             <Field label="Search linked jobs">
               <Input
                 value={query}
@@ -328,7 +353,7 @@ export function CandidateWorkspace({
             </Panel>
           ))}
           {!interviews.length && (
-            <p>No interviews have been scheduled for your applications.</p>
+            <EmptyState title="No interviews scheduled" description="When an employer schedules an interview, its date, time and location will appear here." />
           )}
         </div>
       )}
@@ -434,10 +459,7 @@ export function CandidateWorkspace({
             </Panel>
           ))}
           {!notices.length && (
-            <p>
-              No updates yet. Status changes and interview details will appear
-              here.
-            </p>
+            <EmptyState title="No notifications yet" description="Hiring-stage changes, interview details and employer requests will appear here." />
           )}
         </div>
       )}
@@ -458,6 +480,7 @@ export function CandidateWorkspace({
               </Panel>
             ))}
           </div>
+          {!cases.length && <EmptyState title="No support requests" description="Create a request if you need help, want to report a concern or need an application reviewed." />}
         </>
       )}
       {selected && (
@@ -510,7 +533,7 @@ export function CandidateWorkspace({
             </DialogDescription>
           </DialogHeader>
           <div className="fm-dialog-body fs-form">
-            <Field label="Subject">
+            <Field label="Subject" required>
               <Input
                 required
                 maxLength={160}
@@ -533,7 +556,7 @@ export function CandidateWorkspace({
                 ))}
               </select>
             </Field>
-            <Field label="Details">
+            <Field label="Details" required>
               <Textarea
                 required
                 minLength={20}

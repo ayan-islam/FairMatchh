@@ -87,7 +87,7 @@ const navigation = [
   { id: "jobs", label: "Jobs", icon: BriefcaseBusiness },
   { id: "applications", label: "Applications", icon: UsersRound },
   { id: "ranking", label: "Candidate ranking", icon: ChartNoAxesCombined },
-  { id: "pipeline", label: "Hiring pipeline", icon: Columns3 },
+  { id: "pipeline", label: "Hiring stages", icon: Columns3 },
   { id: "interviews", label: "Interviews", icon: CalendarDays },
   { id: "fairness", label: "Fairness", icon: ShieldCheck },
   { id: "reports", label: "Reports", icon: ChartNoAxesCombined },
@@ -158,6 +158,7 @@ export function RecruiterWorkspace({
   const [savingOrganization, setSavingOrganization] = useState(false);
   const evidenceLoaded = useCallback((bundle: OrganizationEvidence) => { setOrg(bundle.organization); onOrganizationChanged(bundle.organization); }, [onOrganizationChanged]);
   const [reviewing, setReviewing] = useState<Candidate | null>(null);
+  const [showGettingStarted, setShowGettingStarted] = useState(true);
   const signedInMember = members.find(member => member.id === accountId);
   const canManageOrganization = signedInMember?.role === "Owner";
   const initials = (value: string) => value.trim().split(/\s+/).slice(0, 2).map(word => word[0]).join("").toUpperCase();
@@ -359,14 +360,29 @@ export function RecruiterWorkspace({
               <PageHeading
                 eyebrow="YOUR HIRING WORKSPACE"
                 title="Your hiring workspace"
-                description="A clearer view of your hiring. Here’s what needs your attention."
+                description="Create jobs, review applications and record every hiring decision from one place."
                 actions={
                   <Button onClick={() => setEditingJob(true)}>
                     <Plus size={17} />
-                    Create a job
+                    Create job post
                   </Button>
                 }
               />
+              {showGettingStarted && (
+                <section className="fs-onboarding" aria-labelledby="employer-getting-started">
+                  <div>
+                    <p className="fm-eyebrow">GETTING STARTED</p>
+                    <h2 id="employer-getting-started">Complete your hiring setup</h2>
+                    <p>These steps prepare your organization to publish jobs and review candidates.</p>
+                  </div>
+                  <ol>
+                    <li><strong>1</strong><span>Complete the organization profile and verification documents.</span></li>
+                    <li><strong>2</strong><span>Create a job with clear, job-related requirements.</span></li>
+                    <li><strong>3</strong><span>Share its candidate link, then review and move applications.</span></li>
+                  </ol>
+                  <Button variant="ghost" onClick={() => setShowGettingStarted(false)}>Hide this guide</Button>
+                </section>
+              )}
               <div className="fm-metrics">
                 <Metric
                   label="Active jobs"
@@ -572,11 +588,11 @@ export function RecruiterWorkspace({
             <>
               <PageHeading
                 title="Jobs"
-                description="Create, publish and manage opportunities in one place."
+                description="Create job posts, save drafts, publish verified openings and copy candidate links."
                 actions={
                   <Button onClick={() => setEditingJob(true)}>
                     <Plus size={17} />
-                    Create a job
+                    Create job post
                   </Button>
                 }
               />
@@ -718,7 +734,7 @@ export function RecruiterWorkspace({
               <PageHeading
                 eyebrow="EVIDENCE-FIRST REVIEW"
                 title="Applications"
-                description="See the skills. Understand the evidence. Make an informed decision."
+                description="Compare candidate-confirmed skills with job requirements before making a decision."
                 actions={
                   <Button
                     variant="outline"
@@ -907,8 +923,8 @@ export function RecruiterWorkspace({
           {view === "pipeline" && (
             <>
               <PageHeading
-                title="Hiring pipeline"
-                description="Keep every candidate moving with a clear, recorded reason."
+                title="Hiring stages"
+                description="Move applications through New, Shortlisted, Interview, Offer and Hired with a recorded reason."
                 actions={
                   <Button onClick={() => setSchedule(true)}>
                     <CalendarDays size={16} />
@@ -1212,7 +1228,7 @@ export function RecruiterWorkspace({
                 title="Workspace settings"
                 description="Manage your saved organization profile and account access."
               />
-              <div className="fm-filter-tabs fm-settings-tabs">
+              <div className="fm-filter-tabs fm-settings-tabs" role="navigation" aria-label="Workspace settings sections">
                 {[
                   "Organization",
                   "Verification documents",
@@ -1222,6 +1238,7 @@ export function RecruiterWorkspace({
                 ].map((t) => (
                   <button
                     className={settingsTab === t ? "active" : ""}
+                    aria-current={settingsTab === t ? "page" : undefined}
                     key={t}
                     onClick={() => setSettingsTab(t)}
                   >

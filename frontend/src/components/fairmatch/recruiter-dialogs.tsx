@@ -373,7 +373,7 @@ export function JobEditor({
             )}
             {step < 2 ? (
               <Button onClick={next}>
-                Continue
+                {step === 0 ? "Review job requirements" : "Review job post"}
                 <ArrowRight size={16} />
               </Button>
             ) : (

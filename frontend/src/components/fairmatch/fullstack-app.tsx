@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { Toaster, toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Field } from "./shared";
+import { Field, LoadingState } from "./shared";
 import { RecruiterWorkspace } from "./recruiter-workspace";
 import { CandidateWorkspace } from "./candidate-workspace";
 import { PlatformAdmin } from "./platform-admin";
@@ -29,6 +29,25 @@ import "./recruiter.css";
 import "./platform.css";
 type Workspace = "employer" | "candidate" | "admin";
 const roles = { employer: "EMPLOYER", candidate: "CANDIDATE", admin: "ADMIN" };
+const workspaceCopy: Record<Workspace, { label: string; title: string; description: string }> = {
+  employer: {
+    label: "Employer",
+    title: "Manage hiring for your organization",
+    description: "Create jobs, review applications and record hiring decisions.",
+  },
+  candidate: {
+    label: "Candidate",
+    title: "Manage your job applications",
+    description: "Open shared job links, apply and track every application.",
+  },
+  admin: {
+    label: "Administrator",
+    title: "Review platform activity",
+    description: "Verify organizations, resolve support cases and review audit records.",
+  },
+};
+const workspaceAccountLabel = (workspace: Workspace) =>
+  `${workspace === "employer" || workspace === "admin" ? "an" : "a"} ${workspaceCopy[workspace].label.toLowerCase()} account`;
 export function FullstackApp() {
   const params = useSearchParams();
   const [workspace, setWorkspace] = useState<Workspace>(
@@ -177,14 +196,15 @@ export function FullstackApp() {
             ? `${user.name} · ${user.role.toLowerCase()}`
             : "Secure hiring workspace"}
         </span>
-        <div>
+        <div role="navigation" aria-label="Choose workspace">
           {(["employer", "candidate", "admin"] as Workspace[]).map((w) => (
             <button
               key={w}
               aria-current={workspace === w ? "page" : undefined}
+              aria-label={`Open ${workspaceCopy[w].label} workspace`}
               onClick={() => change(w)}
             >
-              {w[0].toUpperCase() + w.slice(1)}
+              {workspaceCopy[w].label}
             </button>
           ))}
           {user && (
@@ -205,11 +225,7 @@ export function FullstackApp() {
           {error}
         </p>
       )}
-      {busy && (
-        <p className="fm-loading" role="status">
-          Loading saved records...
-        </p>
-      )}
+      {busy && <LoadingState label="Opening your FairMatch workspace" />}
       {!busy && !user && (
         <AccountForm
           key={workspace}
@@ -332,12 +348,10 @@ function AccountForm({
   if (joining) return <JoinOrganization onSession={onSession} onBack={() => setJoining(false)} />;
   return (
     <main className="fm-login" id="main-content">
-      <span className="fm-login-brand">FairMatch.</span>
-      <h1>{register ? "Create your account" : "Welcome back"}</h1>
-      <p>
-        {workspace[0].toUpperCase() + workspace.slice(1)} workspace · Saved
-        records, clear decisions.
-      </p>
+      <span className="fm-login-brand">FairMatch<span>.</span></span>
+      <p className="fm-login-role">{workspaceCopy[workspace].label} workspace</p>
+      <h1>{register ? `Create your ${workspaceCopy[workspace].label.toLowerCase()} account` : workspaceCopy[workspace].title}</h1>
+      <p>{register ? workspaceCopy[workspace].description : `Sign in to continue. ${workspaceCopy[workspace].description}`}</p>
       <form onSubmit={submit}>
         <Field
           label={workspace === "candidate" ? "Candidate username" : workspace === "admin" ? "Administrator username" : "Employer username"}
@@ -406,7 +420,7 @@ function AccountForm({
           </p>
         )}
         <Button disabled={busy}>
-          {busy ? "Please wait..." : register ? "Create account" : "Sign in"}
+          {busy ? "Please wait..." : register ? `Create ${workspaceAccountLabel(workspace)}` : `Sign in to ${workspaceCopy[workspace].label.toLowerCase()} workspace`}
         </Button>
       </form>
       {workspace !== "admin" && (
@@ -417,7 +431,7 @@ function AccountForm({
             setError("");
           }}
         >
-          {register ? "Already registered? Sign in" : "Create a new account"}
+          {register ? "I already have an account" : `Create ${workspaceAccountLabel(workspace)}`}
         </Button>
       )}
       {!register && <Button variant="ghost" onClick={() => setRecovering(true)}>Forgot password?</Button>}

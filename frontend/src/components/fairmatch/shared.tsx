@@ -1,7 +1,7 @@
 import { Children, isValidElement, type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, ArrowUpRight, Inbox } from "lucide-react";
+import { Search, ArrowUpRight, Inbox, LoaderCircle } from "lucide-react";
 
 export function StatusBadge({
   children,
@@ -110,20 +110,33 @@ export function SearchField({
   label?: string;
 }) {
   return (
-    <label className="fm-search">
-      <Search size={17} />
-      <input
-        aria-label={label}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
-      {value && (
-        <button aria-label="Clear search" onClick={() => onChange("")}>
-          Clear
-        </button>
-      )}
+    <label className="fm-search-field">
+      <span>{label}</span>
+      <span className="fm-search">
+        <Search size={17} aria-hidden="true" />
+        <input
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        {value && (
+          <button type="button" aria-label={`Clear ${label.toLowerCase()}`} onClick={() => onChange("")}>
+            Clear
+          </button>
+        )}
+      </span>
     </label>
+  );
+}
+export function LoadingState({ label = "Loading saved information" }: { label?: string }) {
+  return (
+    <div className="fm-loading-state" role="status" aria-live="polite">
+      <LoaderCircle size={24} aria-hidden="true" />
+      <div>
+        <strong>{label}</strong>
+        <span>Please wait a moment.</span>
+      </div>
+    </div>
   );
 }
 export function EmptyState({

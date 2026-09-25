@@ -741,6 +741,15 @@
   min-width: 220px;
   height: 39px;
 }
+.fm-search-field {
+  display: grid;
+  gap: 6px;
+  min-width: 220px;
+  color: #37556d;
+  font-size: 12px;
+  font-weight: 600;
+}
+.fm-search-field .fm-search { min-width: 0; }
 .fm-search > input {
   width: 100%;
   min-width: 0;

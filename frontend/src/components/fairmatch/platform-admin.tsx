@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Panel, Metric, Field, StatusBadge } from "./shared";
+import { Panel, Metric, Field, StatusBadge, PageHeading, EmptyState } from "./shared";
 import {
   platformApi,
   type Organization,
@@ -22,6 +22,11 @@ import { toast } from "sonner";
 import { OrganizationDocuments, type OrganizationEvidence } from "./organization-documents";
 const organizationStatuses = ["Pending", "Verified", "Changes requested", "Cancelled"] as const;
 type OrganizationStatus = (typeof organizationStatuses)[number];
+const adminPageCopy: Record<string, { title: string; description: string }> = {
+  Organizations: { title: "Organization verification", description: "Review business details and supporting documents before allowing an organization to publish jobs." },
+  "Support & appeals": { title: "Support requests and appeals", description: "Review candidate and employer requests, then record a clear response." },
+  Audit: { title: "Platform audit trail", description: "Inspect saved administrative and hiring activity for accountability." },
+};
 
 export function PlatformAdmin({ auth }: { auth: string }) {
   const [orgs, setOrgs] = useState<Organization[]>([]);
@@ -130,18 +135,12 @@ export function PlatformAdmin({ auth }: { auth: string }) {
   }
   return (
     <main className="fs-workspace" id="main-content">
-      <div className="fs-heading">
-        <div>
-          <p className="fm-eyebrow">PLATFORM OPERATIONS</p>
-          <h1>Administration</h1>
-          <p>
-            Review organizations, respond to cases and inspect saved activity.
-          </p>
-        </div>
-        <Button variant="outline" onClick={() => setRevision((r) => r + 1)}>
-          Refresh records
-        </Button>
-      </div>
+      <PageHeading
+        eyebrow="PLATFORM OPERATIONS"
+        title={adminPageCopy[tab].title}
+        description={adminPageCopy[tab].description}
+        actions={<Button variant="outline" onClick={() => setRevision((r) => r + 1)}>Refresh records</Button>}
+      />
       <div className="fm-metrics">
         <Metric
           label="Organizations"
@@ -159,11 +158,12 @@ export function PlatformAdmin({ auth }: { auth: string }) {
           note="Candidate and employer requests"
         />
       </div>
-      <nav className="fs-tabs">
+      <nav className="fs-tabs" aria-label="Administrator pages">
         {["Organizations", "Support & appeals", "Audit"].map((t) => (
           <Button
             key={t}
             variant={tab === t ? "default" : "outline"}
+            aria-current={tab === t ? "page" : undefined}
             onClick={() => setTab(t)}
           >
             {t}
@@ -228,10 +228,10 @@ export function PlatformAdmin({ auth }: { auth: string }) {
               </Panel>
             ))}
           {visibleOrganizations.length === 0 && (
-            <Panel>
-              <h2>{organizationStatus === "Changes requested" ? "No organizations awaiting changes" : `No ${organizationStatus.toLowerCase()} organizations found`}</h2>
-              <p>{query.trim() ? "Try another search or choose a different status." : "Choose another status to view those organizations."}</p>
-            </Panel>
+            <EmptyState
+              title={organizationStatus === "Changes requested" ? "No organizations awaiting changes" : `No ${organizationStatus.toLowerCase()} organizations found`}
+              description={query.trim() ? "Try another search or choose a different verification status." : "Choose another verification status to view those organizations."}
+            />
           )}
         </div>
       )}
@@ -267,7 +267,7 @@ export function PlatformAdmin({ auth }: { auth: string }) {
                 </Button>
               </Panel>
             ))}
-          {!cases.length && <p>No support cases have been submitted.</p>}
+          {!cases.length && <EmptyState title="No support requests" description="Candidate and employer requests will appear here when they are submitted." />}
         </div>
       )}
       {tab === "Audit" && (
@@ -335,6 +335,7 @@ export function PlatformAdmin({ auth }: { auth: string }) {
                 <OrganizationDocuments key={org.id} auth={auth} adminOrgId={org.id} onLoaded={setReviewEvidence} checkedIds={reviewedDocumentIds} onChecked={setReviewedDocumentIds} onPdfFullscreenChange={handlePdfFullscreenChange} />
                 {org.status !== "Cancelled" && <label className="fm-check-row">
                   <input
+                    required
                     type="checkbox"
                     checked={reviewed}
                     onChange={(e) => setReviewed(e.target.checked)}
@@ -342,6 +343,7 @@ export function PlatformAdmin({ auth }: { auth: string }) {
                   <span>
                     I reviewed the organization details and supporting evidence and can
                     explain this decision.
+                    <b className="fm-required" aria-hidden="true">*</b>
                   </span>
                 </label>}
               </>
@@ -349,6 +351,8 @@ export function PlatformAdmin({ auth }: { auth: string }) {
             {item && <p>{item.detail}</p>}
             <Field label={org ? "Decision reason" : "Response to candidate"}>
               <Textarea
+                required
+                minLength={20}
                 maxLength={2000}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
