@@ -1,11 +1,17 @@
 package com.fairmatch.privacy;
 
 import com.fairmatch.audit.AuditService;
+import com.fairmatch.application.ApplicationService;
 import com.fairmatch.common.ApiException;
+import com.fairmatch.document.DocumentController;
 import com.fairmatch.platform.AccountSecurityService;
 import com.fairmatch.platform.PlatformService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.time.Instant;
 import java.util.*;
@@ -15,6 +21,7 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,9 +34,14 @@ class CandidatePrivacyController {
     private final AccountSecurityService security;
     private final MongoTemplate mongo;
     private final AuditService audit;
+    private final ApplicationService applications;
+    private final DocumentController documents;
+    private final PasswordEncoder passwords;
 
-    CandidatePrivacyController(PlatformService platform, AccountSecurityService security, MongoTemplate mongo, AuditService audit) {
+    CandidatePrivacyController(PlatformService platform, AccountSecurityService security, MongoTemplate mongo, AuditService audit,
+        ApplicationService applications, DocumentController documents, PasswordEncoder passwords) {
         this.platform = platform; this.security = security; this.mongo = mongo; this.audit = audit;
+        this.applications = applications; this.documents = documents; this.passwords = passwords;
     }
 
     private List<Document> read(String collection, Criteria scope, String... fields) {
@@ -96,5 +108,50 @@ class CandidatePrivacyController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON)
             .header(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=\"fairmatch-candidate-data.json\"")
             .header(HttpHeaders.CACHE_CONTROL,"no-store, private").body(body);
+    }
+
+    record AccountErasure(
+        @NotBlank(message="Current password is required.") @Size(max=72,message="Password must be at most 72 characters.") String password,
+        @NotBlank(message="Type DELETE MY ACCOUNT to confirm.")
+        @Pattern(regexp="DELETE MY ACCOUNT",message="Type DELETE MY ACCOUNT exactly to confirm permanent deletion.") String confirmation) {}
+    record ErasureReceipt(boolean deleted,String receipt,int applicationsRemoved,int documentsRemoved) {}
+
+    @DeleteMapping("/account")
+    @Transactional
+    ErasureReceipt eraseAccount(@Valid @RequestBody AccountErasure input, Principal principal) {
+        var account=platform.account(principal.getName());
+        if(!account.role().equals("CANDIDATE"))throw new ApiException(HttpStatus.FORBIDDEN,"Candidate account required.");
+        security.rateLimit("candidate-erasure",account.id(),3,3600);
+        if(input.password().getBytes(StandardCharsets.UTF_8).length>72||!passwords.matches(input.password(),account.passwordHash()))
+            throw new ApiException(HttpStatus.BAD_REQUEST,"Current password is incorrect. Your account was not changed.");
+
+        // Storage objects go first. If the private document service is unavailable, fail without deleting the account metadata.
+        int documentsRemoved=documents.eraseAllForOwner(account.id());
+        int applicationsRemoved=applications.eraseOwnedApplications(account.id());
+
+        var supportIds=mongo.find(Query.query(Criteria.where("ownerId").is(account.id())),Document.class,"support_cases")
+            .stream().map(d->d.getString("_id")).filter(Objects::nonNull).toList();
+        mongo.remove(Query.query(Criteria.where("ownerId").is(account.id())),"application_drafts");
+        mongo.remove(Query.query(Criteria.where("ownerId").is(account.id())),"candidate_job_visits");
+        mongo.remove(Query.query(Criteria.where("ownerId").is(account.id())),"notifications");
+        mongo.remove(Query.query(Criteria.where("ownerId").is(account.id())),"support_cases");
+        mongo.remove(Query.query(Criteria.where("_id").is(account.id())),"profiles");
+        mongo.remove(Query.query(Criteria.where("ownerId").is(account.id())),"account_sessions");
+        mongo.remove(Query.query(Criteria.where("ownerId").is(account.id())),"account_challenges");
+        mongo.remove(Query.query(Criteria.where("_id").is(account.id())),"account_verifications");
+        mongo.remove(Query.query(Criteria.where("recipient").is(account.contact())),"email_outbox");
+
+        var auditScope=new ArrayList<Criteria>();
+        auditScope.add(Criteria.where("actor").in(account.username(),account.id()));
+        auditScope.add(Criteria.where("reference").is(account.id()));
+        if(!supportIds.isEmpty())auditScope.add(Criteria.where("reference").in(supportIds));
+        mongo.remove(Query.query(new Criteria().orOperator(auditScope)),"audit_events");
+
+        var deleted=mongo.remove(Query.query(Criteria.where("_id").is(account.id()).and("role").is("CANDIDATE").and("passwordHash").is(account.passwordHash())),PlatformService.Account.class);
+        if(deleted.getDeletedCount()!=1)throw new ApiException(HttpStatus.CONFLICT,"The account changed during deletion. Sign in again and retry.");
+
+        String receipt="ERASE-"+UUID.randomUUID();
+        audit.record("platform","CANDIDATE_ACCOUNT_ERASED",receipt,"Candidate account and account-linked recruitment data were permanently erased","candidate-self-service");
+        return new ErasureReceipt(true,receipt,applicationsRemoved,documentsRemoved);
     }
 }

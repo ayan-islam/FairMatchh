@@ -1,4 +1,4 @@
-# Candidate data export and draft deletion
+# Candidate data export, draft deletion and account erasure
 
 Open **Candidate > Privacy** after signing in. These features use the real Java backend and MongoDB records. They do not add sample recruitment data.
 
@@ -16,16 +16,24 @@ Privacy lists the candidate's unfinished application drafts. Choose Delete draft
 
 Deletion and its audit entry use one MongoDB transaction. Removing a draft does not remove the reusable profile or a submitted application. The next time that job's application form is opened, it has no stored draft to restore. CV deletion remains in Documents, and application withdrawal remains in My applications.
 
+## Permanently delete a candidate account
+
+The **Delete account and data** panel requires the current password and the exact phrase `DELETE MY ACCOUNT`. The API rate-limits attempts, checks the signed-in candidate and password, deletes private PDF objects through the document worker, then removes account-linked applications, assessments, rankings, interviews, messages, drafts, linked jobs, notifications, support cases, extracted document metadata, email queue entries, verification records and sessions. Job application counts are corrected. A different candidate's records are never selected.
+
+If private document storage is unavailable, deletion stops before account metadata is removed so an inaccessible PDF cannot be silently left behind. After success, the current token no longer authenticates and the browser returns to candidate sign-in. FairMatch retains only an anonymous `CANDIDATE_ACCOUNT_ERASED` receipt without the deleted username, email or account ID.
+
 ## Explain the code
 
 - `frontend/src/components/fairmatch/candidate-privacy.tsx`: displays the export button, draft list, loading/errors and deletion confirmation. The browser requests a download only after the API succeeds.
-- `backend/src/main/java/com/fairmatch/privacy/CandidatePrivacyController.java`: candidate-only endpoints, authenticated scope, explicit export projections, export limits, stale-draft protection and audit recording.
-- `backend/src/test/java/com/fairmatch/CandidatePrivacyTest.java`: four integration tests for ownership/secrets, role and size limits, stale deletion and preservation, and per-account rate limits.
+- `backend/src/main/java/com/fairmatch/privacy/CandidatePrivacyController.java`: candidate-only endpoints, authenticated scope, explicit export projections, export limits, stale-draft protection, password-confirmed erasure and anonymous audit recording.
+- `ApplicationService.eraseOwnedApplications`: removes each owned application and its conversations, rankings, reviews, interviews, notifications and count contribution.
+- `DocumentController.eraseAllForOwner`: removes private MinIO objects before deleting their MongoDB metadata.
+- `backend/src/test/java/com/fairmatch/CandidatePrivacyTest.java`: five integration tests for ownership/secrets, role and size limits, stale deletion, rate limits, password confirmation, cross-account isolation and complete record removal.
 
-Endpoints: `GET /api/candidate/privacy/export`, `GET /api/candidate/privacy/drafts`, and `DELETE /api/candidate/privacy/drafts/{jobId}` with `{ "expectedUpdatedAt": "<timestamp from the list>" }`.
+Endpoints: `GET /api/candidate/privacy/export`, `GET /api/candidate/privacy/drafts`, `DELETE /api/candidate/privacy/drafts/{jobId}` with `{ "expectedUpdatedAt": "<timestamp from the list>" }`, and `DELETE /api/candidate/privacy/account` with the current password and exact confirmation phrase.
 
 The privacy module reads explicit projections of existing collections rather than creating a second copy of recruitment records. Export requests record `CANDIDATE_DATA_EXPORTED`; deletion records `CANDIDATE_DRAFT_DELETED`. These audit details do not include the exported personal data itself.
 
-## What is still pending
+## Scope boundary
 
-This feature is an account-linked data download, not a claim of complete privacy-law compliance. Automatic account erasure, configured retention policies and employer/admin account exports still need implementation. Candidates can already submit a Privacy support case for a human response, but that case does not automatically delete records.
+This is a working account-linked privacy workflow, not a legal certification for every jurisdiction. Organization-wide retention schedules and employer/administrator account closure require an approved institutional policy because those records include other users' recruitment decisions and audit obligations. Candidates can submit a Privacy support case for questions that fall outside self-service erasure.

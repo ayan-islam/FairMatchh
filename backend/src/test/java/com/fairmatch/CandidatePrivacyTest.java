@@ -107,4 +107,44 @@ class CandidatePrivacyTest {
         for(int i=0;i<6;i++)call(get("/api/candidate/privacy/export"),token,null,200);
         call(get("/api/candidate/privacy/export"),token,null,429);
     }
+
+    @Test void accountErasureRequiresPasswordAndRemovesOnlyAuthenticatedCandidateData() throws Exception {
+        var session=register("CANDIDATE");var token=session.get("token").asText();var owner=session.at("/user/id").asText();
+        var username=session.at("/user/username").asText();
+        var other=register("CANDIDATE");var otherOwner=other.at("/user/id").asText();
+        call(put("/api/candidate/profile"),token,Map.of("role","Private role","experience","Private experience","education","Private education","skills",List.of("Private skill")),200);
+        call(put("/api/candidate/drafts/private-job"),token,Map.of("role","Private draft"),200);
+        insert("candidate_job_visits","private-visit",owner,"jobId","private-job");
+        mongo.getCollection("jobs").insertOne(new Document("_id","private-job").append("applications",1));
+        insert("applications","private-application",owner,"jobId","private-job","organizationId","private-org","stage","New");
+        insert("application_messages","private-message",owner,"applicationId","private-application","message","Private conversation");
+        insert("interviews","private-interview",owner,"candidateId","private-application","jobId","private-job");
+        insert("ranking_reviews","private-ranking",owner,"applicationId","private-application");
+        insert("notifications","private-notice",owner,"title","Private notice");
+        insert("support_cases","private-case",owner,"subject","Private support case");
+        mongo.getCollection("audit_events").insertOne(new Document("_id","private-audit").append("organizationId","platform").append("reference",owner).append("actor",username));
+        insert("notifications","other-notice",otherOwner,"title","Other candidate notice");
+
+        call(delete("/api/candidate/privacy/account"),token,Map.of("password","WrongPassword!123","confirmation","DELETE MY ACCOUNT"),400);
+        assertThat(mongo.getCollection("accounts").countDocuments(new Document("_id",owner))).isEqualTo(1);
+        call(delete("/api/candidate/privacy/account"),token,Map.of("password","TestPassword!123","confirmation","delete my account"),400);
+
+        var receipt=call(delete("/api/candidate/privacy/account"),token,Map.of("password","TestPassword!123","confirmation","DELETE MY ACCOUNT"),200);
+        assertThat(receipt.get("deleted").asBoolean()).isTrue();
+        assertThat(receipt.get("applicationsRemoved").asInt()).isEqualTo(1);
+        for(var collection:List.of("accounts","profiles","application_drafts","candidate_job_visits","applications","application_messages","interviews","ranking_reviews","notifications","support_cases","account_sessions"))
+            assertThat(mongo.getCollection(collection).countDocuments(new Document("ownerId",owner))).as(collection).isZero();
+        assertThat(mongo.getCollection("accounts").countDocuments(new Document("_id",owner))).isZero();
+        assertThat(mongo.getCollection("profiles").countDocuments(new Document("_id",owner))).isZero();
+        assertThat(mongo.getCollection("applications").countDocuments(new Document("_id","private-application"))).isZero();
+        assertThat(mongo.getCollection("application_messages").countDocuments(new Document("applicationId","private-application"))).isZero();
+        assertThat(mongo.getCollection("interviews").countDocuments(new Document("candidateId","private-application"))).isZero();
+        assertThat(mongo.getCollection("ranking_reviews").countDocuments(new Document("applicationId","private-application"))).isZero();
+        assertThat(mongo.getCollection("jobs").find(new Document("_id","private-job")).first().getInteger("applications")).isZero();
+        assertThat(mongo.getCollection("notifications").countDocuments(new Document("ownerId",otherOwner))).isEqualTo(1);
+        assertThat(mongo.getCollection("accounts").countDocuments(new Document("_id",otherOwner))).isEqualTo(1);
+        assertThat(mongo.getCollection("audit_events").countDocuments(new Document("actor",username))).isZero();
+        assertThat(mongo.getCollection("audit_events").countDocuments(new Document("action","CANDIDATE_ACCOUNT_ERASED"))).isEqualTo(1);
+        call(get("/api/account/me"),token,null,401);
+    }
 }

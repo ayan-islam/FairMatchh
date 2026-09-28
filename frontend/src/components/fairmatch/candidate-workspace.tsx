@@ -58,10 +58,12 @@ export function CandidateWorkspace({
   auth,
   user,
   requestedId,
+  onAccountDeleted,
 }: {
   auth: string;
   user: User;
   requestedId: string | null;
+  onAccountDeleted: () => void;
 }) {
   const [conversation, setConversation] = useState<string | null>(null);
   const [interviews, setInterviews] = useState<CandidateInterview[]>([]);
@@ -203,7 +205,7 @@ export function CandidateWorkspace({
           <Button variant="ghost" onClick={() => setShowGettingStarted(false)}>Hide this guide</Button>
         </section>
       )}
-      {tab === "Privacy" && <CandidatePrivacy auth={auth} />}
+      {tab === "Privacy" && <CandidatePrivacy auth={auth} onAccountDeleted={onAccountDeleted} />}
       {error && (
         <p className="fm-error" role="alert">
           {error}

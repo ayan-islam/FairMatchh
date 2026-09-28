@@ -6,11 +6,11 @@ The organization owner can create recruiter invitations, revoke unused invitatio
 
 1. Sign in as the organization's owner.
 2. Open **Settings > Team & access** and enter the teammate's email.
-3. Click **Create invitation**. Copy the private code and share it directly with that teammate. It is shown once, expires after 48 hours and works once. It is not automatically emailed.
+3. Click **Create invitation**. The private code is shown once, expires after 48 hours and works once. When SMTP is configured, FairMatch also queues the invitation to the entered email address; otherwise the owner can share the displayed code directly.
 4. The teammate opens the same FairMatch installation, selects **Employer > Join an organization**, and enters the code, invited email, name, new username and password.
 5. The new account joins the existing organization as a Recruiter. The owner remains unchanged.
 
-An invitation currently requires an email without an existing FairMatch account. It does not transfer a candidate account or an employer from another organization. The code is a secret authorization from the owner; entering an email does not establish that the recipient owns that inbox. Email verification is a separate feature.
+An invitation currently requires an email without an existing FairMatch account. It does not transfer a candidate account or an employer from another organization. Acceptance must use the invited address and one-use code. A delivered SMTP invitation demonstrates access to that inbox; directly sharing the displayed fallback code remains owner-authorized access rather than independent inbox verification. Account email verification is a separate feature.
 
 The localhost address works on the computer running FairMatch. A teammate using a separate clone has a separate installation and database; an invitation from your database will not work in theirs. Shared remote access still requires a configured deployment, which is outside the laptop-only setup.
 

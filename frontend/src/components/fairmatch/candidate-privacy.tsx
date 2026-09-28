@@ -1,13 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { EmptyState, Panel } from "./shared";
+import { EmptyState, Field, Panel } from "./shared";
 import { request } from "@/lib/api";
 
 type Draft = { id: string; jobId: string; updatedAt: string; values: { role?: string } };
 
-export function CandidatePrivacy({auth}: {auth: string}) {
+export function CandidatePrivacy({auth, onAccountDeleted}: {auth: string; onAccountDeleted: () => void}) {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -15,6 +16,9 @@ export function CandidatePrivacy({auth}: {auth: string}) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [revision, setRevision] = useState(0);
+  const [erasing, setErasing] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
   useEffect(() => {
     let cancelled = false;
     void request<Draft[]>("candidate/privacy/drafts", "GET", undefined, auth)
@@ -59,8 +63,10 @@ export function CandidatePrivacy({auth}: {auth: string}) {
           <Button variant="outline" disabled={busy} onClick={() => { setRemoving(draft); setError(""); }}>Delete draft</Button>
         </Panel>)}</div>}
     </Panel>
-    <Panel title="Other privacy requests">
-      <p>Delete individual CVs from Documents. To ask about account removal or other retained records, open Support and select Privacy. Automatic account erasure is not available yet.</p>
+    <Panel title="Delete account and data" description="Permanently remove this candidate account and its FairMatch recruitment records.">
+      <p>This removes your submitted applications, hiring progress, interviews, messages, saved drafts, linked jobs, notifications, support requests, CV files, profile and active sessions. This action cannot be undone.</p>
+      <p>Download your data first if you need a copy. An anonymous deletion receipt remains in the platform audit log.</p>
+      <Button variant="destructive" disabled={busy} onClick={() => { setErasing(true); setError(""); setPassword(""); setConfirmation(""); }}>Delete my account</Button>
     </Panel>
     <Dialog open={!!removing} onOpenChange={open => { if (!open && !busy) setRemoving(null); }}>
       <DialogContent className="fm-dialog"><DialogHeader><DialogTitle>Delete this saved draft?</DialogTitle><DialogDescription>This removes the unfinished draft for {removing?.values.role || removing?.jobId}. Your profile and any submitted application remain saved.</DialogDescription></DialogHeader>
@@ -75,6 +81,28 @@ export function CandidatePrivacy({auth}: {auth: string}) {
           } catch (e) { setError((e as Error).message); }
           finally { setBusy(false); }
         }}>Delete saved draft</Button>
+      </DialogContent>
+    </Dialog>
+    <Dialog open={erasing} onOpenChange={open => { if (!open && !busy) setErasing(false); }}>
+      <DialogContent className="fm-dialog"><DialogHeader><DialogTitle>Permanently delete your candidate account?</DialogTitle><DialogDescription>All account-linked candidate and recruitment data will be erased. Download your data before continuing if you need a copy.</DialogDescription></DialogHeader>
+        {error && <p role="alert" className="fm-error">{error}</p>}
+        <Field label="Current password" required>
+          <Input type="password" autoComplete="current-password" required maxLength={72} value={password} onChange={e => setPassword(e.target.value)} />
+        </Field>
+        <Field label="Confirmation" required hint="Type DELETE MY ACCOUNT exactly.">
+          <Input required value={confirmation} onChange={e => setConfirmation(e.target.value)} aria-invalid={!!confirmation && confirmation !== "DELETE MY ACCOUNT"} />
+        </Field>
+        <div className="fm-dialog-actions">
+          <Button variant="outline" disabled={busy} onClick={() => setErasing(false)}>Keep my account</Button>
+          <Button variant="destructive" disabled={busy || !password || confirmation !== "DELETE MY ACCOUNT"} onClick={async () => {
+            if (busy) return;
+            setBusy(true); setError("");
+            try {
+              await request("candidate/privacy/account", "DELETE", {password, confirmation}, auth);
+              onAccountDeleted();
+            } catch (e) { setError((e as Error).message); setBusy(false); }
+          }}>{busy ? "Deleting account..." : "Delete account permanently"}</Button>
+        </div>
       </DialogContent>
     </Dialog>
   </div>;

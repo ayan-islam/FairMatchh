@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController @RequestMapping("/api/candidate/documents")
-class DocumentController {
+public class DocumentController {
     private final PlatformService platform;private final MongoTemplate mongo;private final AuditService audit;private final ObjectMapper json;private final AiCvReviewService ai;
     private final Set<String> aiJobs=java.util.concurrent.ConcurrentHashMap.newKeySet();
     private final HttpClient http=HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).connectTimeout(Duration.ofSeconds(3)).build();
@@ -104,4 +104,11 @@ class DocumentController {
         var saved=new Resume(old.id(),old.ownerId(),old.filename(),old.bytes(),"Confirmed",old.text(),old.createdAt(),old.pages(),old.suggestions(),old.warnings(),old.extractionVersion(),old.aiReview(),old.aiStatus());mongo.save(saved);audit.record("platform","DOCUMENT_PROFILE_CONFIRMED",id,"Candidate reviewed profile and compact CV highlights",p.getName());return saved;
     }
     @DeleteMapping("/{id}") Map<String,Boolean> delete(@PathVariable String id,Principal p){var r=owned(id,owner(p));worker(id,"DELETE",null);mongo.remove(r);audit.record("platform","DOCUMENT_DELETED",id,"Candidate removed private CV",p.getName());return Map.of("deleted",true);}
+    /** Delete private PDF objects before their metadata so a storage failure cannot leave an undisclosed file behind. */
+    public int eraseAllForOwner(String ownerId) {
+        var documents=mongo.find(Query.query(Criteria.where("ownerId").is(ownerId)),Resume.class);
+        for(var document:documents)worker(document.id(),"DELETE",null);
+        if(!documents.isEmpty())mongo.remove(Query.query(Criteria.where("ownerId").is(ownerId)),Resume.class);
+        return documents.size();
+    }
 }

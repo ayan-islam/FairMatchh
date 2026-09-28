@@ -122,6 +122,19 @@ public class ApplicationService {
         purgeLinkedRecords(removed);
         audit.record(old.organizationId(),"APPLICATION_WITHDRAWN_REMOVED",old.jobId(),"A candidate withdrew an application; its operational records were removed.","candidate-self-service");
     }
+    /** Removes every recruitment record owned by a candidate during account erasure. */
+    @Transactional public int eraseOwnedApplications(String ownerId) {
+        var owned=applications.findByOwnerIdOrderByAppliedAtDesc(ownerId);
+        int removed=0;
+        for(var application:owned) {
+            var result=mongo.remove(Query.query(Criteria.where("_id").is(application.id()).and("ownerId").is(ownerId)),ApplicationDocument.class);
+            if(result.getDeletedCount()==1) {
+                purgeLinkedRecords(application);
+                removed++;
+            }
+        }
+        return removed;
+    }
     private void purgeLinkedRecords(ApplicationDocument application) {
         var id=application.id();
         var interviews=mongo.find(Query.query(Criteria.where("candidateId").is(id)),org.bson.Document.class,"interviews");

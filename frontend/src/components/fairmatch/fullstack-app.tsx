@@ -291,6 +291,11 @@ export function FullstackApp() {
           auth={auth}
           user={user}
           requestedId={params.get("job")}
+          onAccountDeleted={() => {
+            clearSession();
+            window.history.replaceState(null, "", "/?workspace=candidate");
+            toast.success("Your candidate account and account-linked data were deleted.");
+          }}
         />
       )}
       {user && workspace === "admin" && <PlatformAdmin auth={auth} />}

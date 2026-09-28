@@ -36,7 +36,7 @@ Read **PROJECT_DEMONSTRATION_GUIDE.md** for the current presentation script, arc
 
 **Local AI CV review:** Ollama runs Qwen3 4B Instruct locally after PyPDF/Tesseract extraction. It creates structured skills, courses, projects, experience and a work-focused summary with page numbers and source quotations. Java validates every cited quotation before showing it. The candidate must confirm suggestions, and deterministic ranking remains separate from the LLM. [AI_CV_REVIEW_PLAN.md](AI_CV_REVIEW_PLAN.md) documents the privacy and evidence design.
 
-**Team access:** An organization owner creates a one-use, email-bound recruiter invitation in Settings > Team & access. A teammate opens Employer > Join an organization on the same FairMatch installation and creates their own account. Recruiters can work on hiring records but cannot manage membership or business verification files. The owner can suspend and restore access; suspension revokes saved sessions. Invitations are shared manually and do not verify email inbox ownership. See **TEAM_ACCESS_GUIDE.md**.
+**Team access:** An organization owner creates a one-use, email-bound recruiter invitation in Settings > Team & access. When SMTP is configured, FairMatch queues the code to the invited address; the owner also sees it once for direct sharing. A teammate opens Employer > Join an organization on the same FairMatch installation and creates their own account. Recruiters can work on hiring records but cannot manage membership or business verification files. The owner can suspend and restore access; suspension revokes saved sessions. See **TEAM_ACCESS_GUIDE.md**.
 
 JWT sign-in and roles; organization registration/settings/review; academic department and related position selection; job draft/publish/edit/close; candidate profiles and saved application drafts; consent-based submissions and duplicate checks; permanent candidate-owned application withdrawal; blind employer responses; human evidence-band reviews; recorded hiring stages; supporting-information conversations; interviews and evaluations; in-app notifications; admin support/appeal cases; fairness process checks; saved audit and real-data CSV reports; private PDF upload, text extraction, candidate confirmation, download and deletion.
 
@@ -54,7 +54,7 @@ The frontend build uses Node.js 22.13+ (Node.js 24 on this laptop). PDF.js rende
 
 Keep the entire **data** folder: MongoDB records, MinIO objects and local signing/service keys live there. Do not delete it to restart. Existing jobs and anonymous applications are preserved. Old anonymous applications are not automatically assigned to new accounts based on an unverified email address.
 
-All services bind locally. No online deployment is configured or required for the September 15 assessment. Email verification/recovery, transactional recruitment emails, emailed recruiter invitations, revocable sessions and SMTP retries are implemented; actual delivery still requires a configured sender account and real inbox verification. Payments, SMS, semantic skill matching, fairness validation and automated retention remain unfinished.
+All services bind locally. No online deployment is configured or required for the September 15 assessment. Email verification/recovery, transactional recruitment emails, emailed recruiter invitations, revocable sessions and SMTP retries are implemented; actual delivery requires a configured sender account and real inbox verification. Candidate data export and permanent account erasure are implemented. Payments, SMS, external government-registry verification and production demographic validation require provider accounts, policies or datasets that are not part of the laptop project. Semantic similarity remains a possible future enhancement; current ranking deliberately uses traceable requirement-term evidence.
 
 ## Tests and rebuild
 
@@ -70,7 +70,7 @@ npm.cmd run typecheck
 
 Before replacing a running build, stop only the FairMatch backend and frontend processes. Windows locks the running JAR, and Next.js reads its production build while serving. Then run `.\mvnw.cmd -DskipTests package` **from the backend folder**, `npm.cmd run build` **from the frontend folder**, and the root launcher again. Prefer the commands in **REBUILD_FAIRMATCH.ps1**, which performs the scoped stop, tests, build and restart.
 
-The latest full backend run has **58 passing tests** (`backend/target/surefire-reports`), including automatic ranking and validated local-AI output without manual ratings. Frontend lint and TypeScript checks passed; the packaged build is verified during the rebuild workflow. Twelve Python extraction/OCR/storage tests passed. Complete the guide's manual rehearsal before the assessment.
+The latest full backend run has **60 passing tests** (`backend/target/surefire-reports`), including automatic ranking, account erasure and validated local-AI output without manual ratings. Frontend lint, TypeScript and production build checks passed. Twelve Python extraction/OCR/storage tests passed. Complete the guide's manual rehearsal before the assessment.
 
 Eight additional backup safety tests pass. A full cold-backup restore rehearsal opened copied MongoDB/MinIO stores on separate ports, matched database collection hashes/counts and downloaded both stored PDFs. See `logs/backup-restore-result.json`. CV extraction/confirmation, candidate privacy actions and persisted requirement reviews were also checked in the browser against a separate test database; see `logs/fullstack-ui-result.json`.
 
@@ -82,7 +82,7 @@ Service references: [MinIO Windows setup](https://min.io/docs/minio/windows/oper
 
 ## Candidate privacy controls
 
-Candidate > Privacy downloads real account-linked records as JSON and deletes saved drafts with stale-edit protection. Original PDFs are downloaded from Documents. See PRIVACY_FEATURE_GUIDE.md for the code flow, included data and remaining privacy work.
+Candidate > Privacy downloads real account-linked records as JSON, deletes saved drafts with stale-edit protection, and permanently erases a password-confirmed candidate account. Erasure removes private CV objects, applications, rankings, interviews, messages, drafts, visits, notifications, support requests, sessions and account/profile records while retaining only an anonymous deletion receipt. Original PDFs are also individually manageable in Documents. See PRIVACY_FEATURE_GUIDE.md.
 
 ## Requirement evidence review
 
@@ -90,4 +90,4 @@ Employer > Applications > Review evidence records an assessment, exact submitted
 
 ## Business verification and drafts
 
-Read **ORGANIZATION_VERIFICATION_GUIDE.md** for employer uploads, administrator login/review and reopening job drafts. Private supporting files, current-document checks, decision history and version protection are connected to the backend. The earlier 39-test milestone and isolated browser draft-to-approval-to-publication rehearsal passed; the current suite has 59 passing tests.
+Read **ORGANIZATION_VERIFICATION_GUIDE.md** for employer uploads, administrator login/review and reopening job drafts. Private supporting files, current-document checks, decision history and version protection are connected to the backend. The earlier 39-test milestone and isolated browser draft-to-approval-to-publication rehearsal passed; the current suite has 60 passing tests.
