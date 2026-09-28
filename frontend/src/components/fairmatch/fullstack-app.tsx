@@ -353,8 +353,10 @@ function AccountForm({
   if (joining) return <JoinOrganization onSession={onSession} onBack={() => setJoining(false)} />;
   return (
     <main className="fm-login" id="main-content">
-      <span className="fm-login-brand">FairMatch<span>.</span></span>
-      <p className="fm-login-role">{workspaceCopy[workspace].label} workspace</p>
+      <div className="fm-login-header">
+        <span className="fm-login-brand">FairMatch<span>.</span></span>
+        <span className="fm-login-role">{workspaceCopy[workspace].label} workspace</span>
+      </div>
       <h1>{register ? `Create your ${workspaceCopy[workspace].label.toLowerCase()} account` : workspaceCopy[workspace].title}</h1>
       <p>{register ? workspaceCopy[workspace].description : `Sign in to continue. ${workspaceCopy[workspace].description}`}</p>
       <form onSubmit={submit}>
@@ -428,19 +430,21 @@ function AccountForm({
           {busy ? "Please wait..." : register ? `Create ${workspaceAccountLabel(workspace)}` : `Sign in to ${workspaceCopy[workspace].label.toLowerCase()} workspace`}
         </Button>
       </form>
-      {workspace !== "admin" && (
-        <Button
-          variant="ghost"
-          onClick={() => {
-            setRegister(!register);
-            setError("");
-          }}
-        >
-          {register ? "I already have an account" : `Create ${workspaceAccountLabel(workspace)}`}
-        </Button>
-      )}
-      {!register && <Button variant="ghost" onClick={() => setRecovering(true)}>Forgot password?</Button>}
-      {workspace === "employer" && <Button variant="ghost" onClick={() => setJoining(true)}>Join an organization</Button>}
+      <div className="fm-login-actions">
+        {workspace !== "admin" && (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setRegister(!register);
+              setError("");
+            }}
+          >
+            {register ? "I already have an account" : `Create ${workspaceAccountLabel(workspace)}`}
+          </Button>
+        )}
+        {!register && <Button variant="ghost" onClick={() => setRecovering(true)}>Forgot password?</Button>}
+        {workspace === "employer" && <Button variant="ghost" onClick={() => setJoining(true)}>Join an organization</Button>}
+      </div>
       {recovering && <PasswordRecovery onClose={() => setRecovering(false)} />}
     </main>
   );

@@ -95,7 +95,11 @@ export function JoinOrganization({ onSession, onBack }: { onSession: (token: str
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   return <main className="fm-login" id="main-content">
-    <span className="fm-login-brand">FairMatch.</span><h1>Join an organization</h1>
+    <div className="fm-login-header">
+      <span className="fm-login-brand">FairMatch<span>.</span></span>
+      <span className="fm-login-role">Employer workspace</span>
+    </div>
+    <h1>Join an organization</h1>
     <p>Use the private invitation supplied by your organization owner. Create your own recruiter account.</p>
     <form onSubmit={async e => {
       e.preventDefault(); if (busy) return; setBusy(true); setError("");
