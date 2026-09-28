@@ -1,5 +1,9 @@
 # FairMatch Full-stack Application
 
+## Team collaboration
+
+The public collaboration repository is `https://github.com/ayan-islam/FairMatchh`. Each of the five members has a dedicated branch and feature area. Start with [TEAMMATE_GIT_GUIDE.md](TEAMMATE_GIT_GUIDE.md), or run `TEAMMATE_SETUP.cmd` to clone the correct branch. After editing, `TEAMMATE_COMMIT_PUSH.cmd` reviews and pushes the member's commit. The repository owner must add each teammate under **Settings > Collaborators** before direct pushes will work.
+
 ## Sign-in model
 
 - **Candidates:** choose a username during registration and sign in with that username and password.

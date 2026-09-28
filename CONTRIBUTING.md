@@ -19,7 +19,7 @@ Replace the example branch with your assigned branch:
 
 ```powershell
 git fetch origin
-git switch --track origin/member-1-frontend-foundation
+git switch --track origin/member-1-accounts-organizations
 git status
 ```
 

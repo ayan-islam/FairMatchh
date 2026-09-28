@@ -1,26 +1,27 @@
 ## Problem and result
 
-Describe the concrete problem and the behavior after this change.
+Describe the concrete problem and the resulting behavior.
 
-## Scope
+## Member area
 
-- Member and assigned area:
-- Main files changed:
-- Shared-file coordination, if any:
+- Member number:
+- Feature area:
+- Branch:
+- Shared files coordinated with:
 
 ## Validation
 
-- [ ] Relevant automated tests pass
-- [ ] Frontend lint/typecheck pass when applicable
-- [ ] Visible changes were checked at desktop and mobile widths
-- [ ] No secrets, private records, uploads or generated dependencies are included
-
-Commands and results:
+List the exact commands and results.
 
 ```text
-Paste the commands and a short result summary here.
+command
+result
 ```
 
-## Screenshots
+## Review checklist
 
-Add before/after screenshots for interface changes.
+- [ ] I changed files for my assigned feature area.
+- [ ] I coordinated changes to shared or reference-only files.
+- [ ] I reviewed the staged diff before committing.
+- [ ] I added screenshots for visible interface changes.
+- [ ] I did not commit credentials, tokens, private documents, database data or generated folders.
