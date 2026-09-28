@@ -1,272 +1,132 @@
-# FairMatch five-member work division
+# FairMatch five-member feature division
 
-This division covers the current FairMatch codebase without giving two people routine ownership of the same file. Everyone works from the complete repository, but each member normally edits only the paths assigned below. If a task requires another member's file, discuss it before editing and mention that coordination in the pull request.
+This is the original feature-based division agreed for the project presentation. Newer FairMatch work is placed with the feature it naturally extends. Each member receives a physical ZIP with an assignment guide, Git commands, an owned-source manifest and relevant cross-feature reference files.
 
 Repository: `https://github.com/ayan-islam/FairMatchh`
 
-## Team summary
+| Member | Feature area | Features to present | What to demonstrate and explain | Branch |
+| --- | --- | --- | --- | --- |
+| 1 | Accounts and organizations | Role-based login, account security/email, organization verification, admin review, recruiter invitations and permissions | Approve an organization, invite a recruiter and explain backend role/ownership enforcement | `member-1-accounts-organizations` |
+| 2 | Job management | Department and position selection, custom positions, job drafts, publishing, closing and exact candidate links | Create or reopen a draft, publish a completed job and copy its exact candidate link | `member-2-job-management` |
+| 3 | Candidate journey | Link-scoped jobs, CV upload/extraction, local Qwen review, profile confirmation, application drafts/submission, tracking, withdrawal and privacy | Open Member 2's link, extract and confirm a CV, apply, track the application and explain MinIO/privacy | `member-3-candidate-journey` |
+| 4 | Application review and ranking | Blind review, requirement evidence, candidate messages, evidence bands, automatic explained ranking, rubric and human assessment | Review Member 3's application, record requirement evidence and explain exactly how ranking points are calculated | `member-4-application-review-ranking` |
+| 5 | Hiring and oversight | Hiring pipeline, recorded reasons, interviews, notifications, fairness checks, reports, audit, support and operations/backup | Move the same application with a reason, schedule/evaluate an interview, show reports/fairness and explain current limits | `member-5-hiring-oversight` |
 
-| Member | Primary responsibility | Working branch | Main demonstration |
-| --- | --- | --- | --- |
-| 1 | Frontend foundation, shared UI, authentication shell and accessibility | `member-1-frontend-foundation` | Switch roles, sign in/register, show responsive shared interface |
-| 2 | Candidate journey, applications, tracking and privacy | `member-2-candidate-journey` | Open an exact job link, save a draft, apply, track and withdraw/export/delete |
-| 3 | Employer hiring operations, jobs, pipeline, interviews and team access | `member-3-employer-hiring` | Create/publish a job, review an application, move a stage and schedule an interview |
-| 4 | Administration, security, organization verification, email and audit | `member-4-admin-security` | Verify an organization, explain role security, account security, support and audit |
-| 5 | CV extraction, local AI, explainable ranking, documents, tests and operations | `member-5-ai-infrastructure` | Upload a CV, show source-linked Qwen output, ranking explanation and service architecture |
+## Member 1 — Accounts and organizations
 
-## Member 1 — Frontend foundation and authentication
+Owns the identity and organization boundary: login/registration, JWT/session security, email verification and recovery, employer ownership, administrator review, business evidence, team invitations and access suspension.
 
-### Features
-
-- Application shell and workspace switching.
-- Employer, candidate and administrator sign-in/registration screens.
-- Shared form controls, validation presentation, required/optional labels and notifications.
-- Responsive layout, design tokens, accessibility and shared frontend types/API helpers.
-- Frontend build configuration and presentation-level documentation.
-
-### Owned paths
+Primary paths:
 
 ```text
-frontend/src/app/**
-frontend/src/components/ui/**
 frontend/src/components/fairmatch/fullstack-app.tsx
-frontend/src/components/fairmatch/fairmatch-app.tsx
-frontend/src/components/fairmatch/shared.tsx
-frontend/src/components/fairmatch/backend.css
-frontend/src/components/fairmatch/platform.css
-frontend/src/components/fairmatch/use-current-time.ts
-frontend/src/components/fairmatch/use-mobile-navigation.ts
-frontend/src/lib/api.ts
-frontend/src/lib/demo-data.ts
-frontend/src/lib/utils.ts
-frontend/AGENTS.md
-frontend/eslint.config.mjs
-frontend/next-env.d.ts
-frontend/next.config.ts
-frontend/package.json
-frontend/package-lock.json
-frontend/postcss.config.mjs
-frontend/tsconfig.json
-README.md
-PROJECT_DEMONSTRATION_GUIDE.md
-FULLSTACK_PROGRESS.md
-FRESH_SETUP.md
+frontend/src/components/fairmatch/account-security.tsx
+frontend/src/components/fairmatch/admin-workspace.tsx
+frontend/src/components/fairmatch/platform-admin.tsx
+frontend/src/components/fairmatch/admin.css
+frontend/src/components/fairmatch/organization-documents.tsx
+frontend/src/components/fairmatch/team-access.tsx
+frontend/src/lib/platform-api.ts
+backend/src/main/java/com/fairmatch/BackendConfiguration.java
+backend/src/main/java/com/fairmatch/DemoSeed.java
+backend/src/main/java/com/fairmatch/common/**
+backend/src/main/java/com/fairmatch/platform/**
+backend account, organization, platform and team tests
+ACCOUNT_SECURITY_SETUP.md
+ORGANIZATION_VERIFICATION_GUIDE.md
+TEAM_ACCESS_GUIDE.md
+integrations.properties.example
 ```
 
-### Required checks
+## Member 2 — Job management
 
-```powershell
-Set-Location frontend
-npm.cmd ci
-npm.cmd run lint
-npm.cmd run typecheck
-npm.cmd run build
+Owns employer job creation and the public link boundary: academic department, related/custom position, draft, publish, edit, close, application count and exact candidate link/visit.
+
+Primary paths:
+
+```text
+frontend/src/components/fairmatch/recruiter-workspace.tsx
+frontend/src/components/fairmatch/recruiter-dialogs.tsx
+frontend/src/components/fairmatch/recruiter.css
+frontend/src/lib/job-options.ts
+backend/src/main/java/com/fairmatch/job/**
+backend/src/test/java/com/fairmatch/WorkingFeaturesTest.java
 ```
 
-Suggested commit: `fix(frontend): improve responsive authentication layout`
+`recruiter-workspace.tsx` and `recruiter-dialogs.tsx` also contain some review/pipeline rendering. Members 4 and 5 receive them as reference files, while Member 2 coordinates edits to these shared components.
 
-## Member 2 — Candidate journey and application lifecycle
+## Member 3 — Candidate journey
 
-### Features
+Owns the candidate's end-to-end path: employer link, profile, PDF upload, PyPDF/OCR extraction, source-linked local Qwen suggestions, candidate confirmation, application draft/submission snapshot, milestone tracker, withdrawal, export and erasure.
 
-- Link-scoped candidate jobs and candidate profile.
-- Application draft, submission snapshot, consent and duplicate protection.
-- Application milestone tracker, notifications and supporting-information conversation.
-- Candidate document confirmation UI and compact CV highlights.
-- Permanent application withdrawal, data export and account privacy controls.
-
-### Owned paths
+Primary paths:
 
 ```text
 frontend/src/components/fairmatch/candidate-workspace.tsx
 frontend/src/components/fairmatch/candidate-portal.tsx
 frontend/src/components/fairmatch/candidate-documents.tsx
 frontend/src/components/fairmatch/candidate-privacy.tsx
-frontend/src/components/fairmatch/application-conversation.tsx
 frontend/src/components/fairmatch/candidate.css
+frontend/src/components/fairmatch/pdf-preview.tsx
 backend/src/main/java/com/fairmatch/application/ApplicationController.java
 backend/src/main/java/com/fairmatch/application/ApplicationDocument.java
 backend/src/main/java/com/fairmatch/application/ApplicationRepository.java
 backend/src/main/java/com/fairmatch/application/ApplicationRequest.java
 backend/src/main/java/com/fairmatch/application/ApplicationService.java
 backend/src/main/java/com/fairmatch/application/StageRequest.java
+backend/src/main/java/com/fairmatch/document/**
 backend/src/main/java/com/fairmatch/privacy/**
-backend/src/test/java/com/fairmatch/CandidatePrivacyTest.java
-backend/src/test/java/com/fairmatch/WorkingFeaturesTest.java
-PRIVACY_FEATURE_GUIDE.md
+document-worker/**
+candidate privacy and AI CV tests/guides
 ```
 
-### Required checks
+## Member 4 — Application review and ranking
 
-```powershell
-Set-Location backend
-.\mvnw.cmd -Dtest=CandidatePrivacyTest,WorkingFeaturesTest test
-Set-Location ..\frontend
-npm.cmd run lint
-npm.cmd run typecheck
-```
+Owns employer review after submission: blind identity projection, requirement-by-requirement evidence, supporting-information conversation, evidence bands, deterministic automatic ranking, explained points and optional human rubric history.
 
-Suggested commit: `feat(candidate): improve application milestone tracking`
-
-## Member 3 — Employer hiring operations
-
-### Features
-
-- Department-based positions and job draft/publish/edit/close workflows.
-- Employer overview, application list, evidence dialog and hiring pipeline.
-- Reasoned stage movement and candidate notifications.
-- Interview scheduling, cancellation and evaluation.
-- Organization recruiter invitation, owner/recruiter permissions and suspension.
-
-### Owned paths
+Primary paths:
 
 ```text
-frontend/src/components/fairmatch/recruiter-workspace.tsx
-frontend/src/components/fairmatch/recruiter-dialogs.tsx
-frontend/src/components/fairmatch/interview-dialogs.tsx
-frontend/src/components/fairmatch/team-access.tsx
-frontend/src/components/fairmatch/recruiter.css
-frontend/src/lib/job-options.ts
-backend/src/main/java/com/fairmatch/job/**
-backend/src/main/java/com/fairmatch/interview/**
-backend/src/main/java/com/fairmatch/platform/TeamController.java
-backend/src/main/java/com/fairmatch/platform/TeamService.java
-backend/src/test/java/com/fairmatch/InterviewFeaturesTest.java
-backend/src/test/java/com/fairmatch/platform/TeamAccessTest.java
-TEAM_ACCESS_GUIDE.md
-```
-
-### Required checks
-
-```powershell
-Set-Location backend
-.\mvnw.cmd -Dtest=InterviewFeaturesTest,TeamAccessTest test
-Set-Location ..\frontend
-npm.cmd run lint
-npm.cmd run typecheck
-```
-
-Suggested commit: `feat(employer): refine interview and pipeline workflow`
-
-## Member 4 — Administration, security and verification
-
-### Features
-
-- JWT sessions, role authorization and organization ownership checks.
-- Account security, password recovery, email verification and durable SMTP outbox.
-- Organization evidence upload/review, approval, rejection, cancellation and filtering.
-- Administrator organizations, support/appeals, audit views and business-file access.
-- Platform bootstrap, common API errors and audit recording.
-
-### Owned paths
-
-```text
-frontend/src/components/fairmatch/admin-workspace.tsx
-frontend/src/components/fairmatch/platform-admin.tsx
-frontend/src/components/fairmatch/admin.css
-frontend/src/components/fairmatch/account-security.tsx
-frontend/src/components/fairmatch/organization-documents.tsx
-frontend/src/lib/platform-api.ts
-backend/src/main/java/com/fairmatch/BackendConfiguration.java
-backend/src/main/java/com/fairmatch/DemoSeed.java
-backend/src/main/java/com/fairmatch/audit/**
-backend/src/main/java/com/fairmatch/common/**
-backend/src/main/java/com/fairmatch/platform/**
-  except TeamController.java and TeamService.java
-backend/src/test/java/com/fairmatch/OrganizationEvidenceTest.java
-backend/src/test/java/com/fairmatch/PlatformFeaturesTest.java
-backend/src/test/java/com/fairmatch/platform/AccountSecurityTest.java
-backend/src/test/java/com/fairmatch/platform/AdminBootstrapTest.java
-ACCOUNT_SECURITY_SETUP.md
-ORGANIZATION_VERIFICATION_GUIDE.md
-integrations.properties.example
-```
-
-### Required checks
-
-```powershell
-Set-Location backend
-.\mvnw.cmd -Dtest=OrganizationEvidenceTest,PlatformFeaturesTest,AccountSecurityTest,AdminBootstrapTest test
-Set-Location ..\frontend
-npm.cmd run lint
-npm.cmd run typecheck
-```
-
-Suggested commit: `feat(admin): improve organization review audit details`
-
-## Member 5 — AI, ranking, documents and infrastructure
-
-### Features
-
-- Private PDF storage and browser preview.
-- PyPDF extraction, English/Bangla OCR and source-page tracking.
-- Local Ollama/Qwen3 4B structured CV review with Java quotation validation.
-- Deterministic explainable candidate ranking and optional evidence assessments.
-- MongoDB/MinIO/document-worker setup, backup/recovery, smoke tests and launch scripts.
-
-### Owned paths
-
-```text
+frontend/src/components/fairmatch/application-conversation.tsx
 frontend/src/components/fairmatch/candidate-ranking.tsx
 frontend/src/components/fairmatch/criteria-review.tsx
-frontend/src/components/fairmatch/governance-panel.tsx
-frontend/src/components/fairmatch/pdf-preview.tsx
-frontend/public/pdf.worker.min.mjs
-frontend/public/pdfjs-LICENSE.txt
-backend/src/main/java/com/fairmatch/FairMatchApplication.java
 backend/src/main/java/com/fairmatch/application/AutomaticEvidenceMatcher.java
 backend/src/main/java/com/fairmatch/application/CriteriaReviewController.java
-backend/src/main/java/com/fairmatch/application/GovernanceController.java
 backend/src/main/java/com/fairmatch/application/RankingController.java
-backend/src/main/java/com/fairmatch/document/**
-backend/src/main/resources/application.properties
 backend/src/test/java/com/fairmatch/CriteriaReviewTest.java
 backend/src/test/java/com/fairmatch/RankingTest.java
-backend/src/test/java/com/fairmatch/document/**
-backend/src/test/resources/**
-backend/pom.xml
-backend/mvnw.cmd
-document-worker/**
+CANDIDATE_RANKING_GUIDE.md
+REQUIREMENT_REVIEW_GUIDE.md
+```
+
+The ZIP also supplies `recruiter-workspace.tsx`, `recruiter-dialogs.tsx` and application models as read-only reference because those shared files call the review features.
+
+## Member 5 — Hiring and oversight
+
+Owns what happens after review and the health of the complete process: recorded hiring stages, pipeline, interviews/evaluations, notifications, fairness checks, reports, support/audit, backups, recovery and launch/test infrastructure.
+
+Primary paths:
+
+```text
+frontend/src/components/fairmatch/interview-dialogs.tsx
+frontend/src/components/fairmatch/governance-panel.tsx
+backend/src/main/java/com/fairmatch/application/GovernanceController.java
+backend/src/main/java/com/fairmatch/audit/**
+backend/src/main/java/com/fairmatch/interview/**
+interview and fairness/platform integration tests
 operations/**
 tools/**
-START_*.cmd
-START_*.ps1
-STOP_*.cmd
-STOP_*.ps1
-REBUILD_FAIRMATCH.ps1
-BACKUP_*.cmd
-BACKUP_*.ps1
-RESET_*.cmd
-RESET_*.ps1
-RESTORE_*.cmd
-RESTORE_*.ps1
-SETUP_FAIRMATCH_AI.*
-AI_CV_REVIEW_PLAN.md
-CANDIDATE_RANKING_GUIDE.md
-OCR_SETUP_AND_CODE_GUIDE.md
-REQUIREMENT_REVIEW_GUIDE.md
+START/STOP/REBUILD/BACKUP/RESET/RESTORE scripts
 BACKUP_AND_RECOVERY_GUIDE.md
+shared UI/build configuration and project-level documentation
 ```
 
-### Required checks
+The ZIP includes recruiter/candidate/platform files as read-only reference where pipeline, notifications and reports are rendered or stored.
 
-```powershell
-Set-Location backend
-.\mvnw.cmd -Dtest=RankingTest,CriteriaReviewTest,AiCvReviewServiceTest test
-Set-Location ..\document-worker
-.\.venv\Scripts\python.exe -m unittest discover -v
-```
+## Collaboration rules
 
-Suggested commit: `feat(ai): strengthen source-linked CV evidence validation`
-
-## Shared rules
-
-1. Never commit `data`, `logs`, `backups`, `.env` files, credentials, uploaded PDFs, `node_modules`, `.next`, `.venv` or `target`.
-2. Never commit directly to `main`. Push the assigned member branch and open a pull request.
-3. Keep each commit focused. Do not reformat files owned by another member.
-4. Pull and rebase from `origin/main` before opening or updating a pull request.
-5. A ranking result only orders review; it never changes a hiring stage. Qwen structures CV evidence; it never ranks or hires.
-6. Run the checks listed for your area and include the results in the pull request.
-7. The coordinator resolves changes to shared files and merges pull requests.
-
-The ZIP work packages are responsibility guides and source snapshots. GitHub remains the source of truth: clone the repository and make the actual commit from the assigned branch.
+1. Clone the full repository and work on the assigned branch. The ZIP is an offline work package and source reference, not a standalone runnable installation.
+2. Edit owned files. Coordinate before changing a shared reference file.
+3. Never commit credentials, `data`, `logs`, backups, uploaded documents, `node_modules`, `.next`, `.venv` or `target`.
+4. Rebase from `origin/main`, run the relevant tests, then push the member branch and open a pull request.
+5. Automatic ranking only orders review. It never changes a hiring stage. Qwen only structures source-linked CV evidence and never ranks or hires.

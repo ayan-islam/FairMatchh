@@ -26,11 +26,11 @@ git status
 Branches:
 
 ```text
-member-1-frontend-foundation
-member-2-candidate-journey
-member-3-employer-hiring
-member-4-admin-security
-member-5-ai-infrastructure
+member-1-accounts-organizations
+member-2-job-management
+member-3-candidate-journey
+member-4-application-review-ranking
+member-5-hiring-oversight
 ```
 
 If Git reports that the branch already exists locally, use `git switch <branch-name>`.
