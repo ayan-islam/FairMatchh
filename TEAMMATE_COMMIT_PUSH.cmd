@@ -86,7 +86,7 @@ if errorlevel 1 goto :failed
 
 echo.
 echo Updating from GitHub before push...
-git fetch origin
+git fetch origin "+refs/heads/main:refs/remotes/origin/main" "+refs/heads/!BRANCH!:refs/remotes/origin/!BRANCH!"
 if errorlevel 1 goto :failed
 git rebase "origin/!BRANCH!"
 if errorlevel 1 goto :conflict

@@ -50,7 +50,7 @@ if exist "%TARGET%\.git" (
     exit /b 1
   )
   echo Cloning %BRANCH% to "%TARGET%"...
-  git clone --branch "%BRANCH%" --single-branch "%REPOSITORY%" "%TARGET%"
+  git clone --branch "%BRANCH%" "%REPOSITORY%" "%TARGET%"
   if errorlevel 1 goto :failed
 )
 
